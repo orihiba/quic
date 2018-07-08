@@ -853,6 +853,7 @@ bool QuicFramer::AppendPacketHeader(const QuicPacketHeader& header,
   }
   if (header.is_in_fec_group == IN_FEC_GROUP) {
 	  private_flags |= PACKET_PRIVATE_FLAGS_FEC_GROUP;
+	  //private_flags |= currentFecConfiguration()
   }
   if (header.fec_flag) {
 	  private_flags |= PACKET_PRIVATE_FLAGS_FEC;
@@ -1221,10 +1222,10 @@ bool QuicFramer::ProcessAuthenticatedHeader(QuicDataReader* reader,
     return RaiseError(QUIC_INVALID_PACKET_HEADER);
   }
 
-  if (private_flags > PACKET_PRIVATE_FLAGS_MAX) {
-    set_detailed_error("Illegal private flags value.");
-    return RaiseError(QUIC_INVALID_PACKET_HEADER);
-  }
+  //if (private_flags > PACKET_PRIVATE_FLAGS_MAX) {
+  //  set_detailed_error("Illegal private flags value.");
+  //  return RaiseError(QUIC_INVALID_PACKET_HEADER);
+  //}
 
   header->entropy_flag = (private_flags & PACKET_PRIVATE_FLAGS_ENTROPY) != 0;
   header->fec_flag = (private_flags & PACKET_PRIVATE_FLAGS_FEC) != 0;
@@ -1244,6 +1245,7 @@ bool QuicFramer::ProcessAuthenticatedHeader(QuicDataReader* reader,
 	  }
 	  header->fec_group =
 		  header->packet_number - first_fec_protected_packet_offset;
+	  header->fec_configuration = (FecConfiguration)((private_flags & PACKET_PRIVATE_FLAGS_FEC_CONFIG) >> 3);
   }
   header->entropy_hash = GetPacketEntropyHash(*header);
   return true;

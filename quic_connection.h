@@ -944,8 +944,6 @@ class NET_EXPORT_PRIVATE QuicConnection
   // Whether the most recent packet was missing before it was received.
   bool was_last_packet_missing_;
 
-  bool should_write_;
-
   // Track some peer state so we can do less bookkeeping
   // Largest sequence sent by the peer which had an ack frame (latest ack info).
   QuicPacketNumber largest_seen_packet_with_ack_;
@@ -1024,9 +1022,6 @@ class NET_EXPORT_PRIVATE QuicConnection
   // The timeout for PING.
   QuicTime::Delta ping_timeout_;
 
-  QuicTime::Delta peek_active_time_;
-  QuicTime::Delta peek_idle_time_;
-
   // Arena to store class implementations within the QuicConnection.
   QuicConnectionArena arena_;
 
@@ -1050,7 +1045,7 @@ class NET_EXPORT_PRIVATE QuicConnection
   // An alarm that fires when an MTU probe should be sent.
   QuicArenaScopedPtr<QuicAlarm> mtu_discovery_alarm_;
 
-  QuicArenaScopedPtr<QuicAlarm> peek_alarm_;
+  // QuicArenaScopedPtr<QuicAlarm> peek_alarm_;
 
   // Neither visitor is owned by this class.
   QuicConnectionVisitorInterface* visitor_;
@@ -1061,6 +1056,9 @@ class NET_EXPORT_PRIVATE QuicConnection
   // An alarm that fires when an FEC packet should be sent.
   QuicArenaScopedPtr<QuicAlarm> fec_alarm_;
 
+    QuicTime::Delta peek_active_time_;
+  QuicTime::Delta peek_idle_time_;
+  
   // Network idle time before this connection is closed.
   QuicTime::Delta idle_network_timeout_;
   QuicTime::Delta new_idle_network_timeout_;
@@ -1101,6 +1099,7 @@ class NET_EXPORT_PRIVATE QuicConnection
   // True by default.  False if we've received or sent an explicit connection
   // close.
   bool connected_;
+  bool should_write_;
 
   // Destination address of the last received packet.
   IPEndPoint last_packet_destination_address_;

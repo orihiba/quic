@@ -62,6 +62,10 @@ typedef std::set<QuicPacketNumber> PacketNumberSet;
 typedef std::list<QuicPacketNumber> PacketNumberList;
 
 ////////////// FEC ////////////////////
+enum FecConfiguration {
+	FEC_100_5,
+};
+
 // Default max packets in an FEC group.
 NET_EXPORT_PRIVATE extern size_t kDefaultMaxPacketsPerFecGroup;
 
@@ -70,6 +74,8 @@ NET_EXPORT_PRIVATE extern size_t kDefaultRecoveryBlocksCount;
 
 // Lowest max packets in an FEC group. not used
 static const size_t kLowestMaxPacketsPerFecGroup = 2;
+
+NET_EXPORT_PRIVATE extern FecConfiguration current_fec_configuration;
 
 NET_EXPORT_PRIVATE extern bool useFec;				// true if the program uses fec (can be enabled by user)
 NET_EXPORT_PRIVATE extern bool useRetransmission;	// true if the program uses retransmission (can be disabled by user)
@@ -402,6 +408,9 @@ enum QuicPacketPrivateFlags {
 
 	// Bit 2: Payload is FEC as opposed to frames?
 	PACKET_PRIVATE_FLAGS_FEC = 1 << 2,
+
+	// 5 top bits : fec conifugration
+	PACKET_PRIVATE_FLAGS_FEC_CONFIG = 0x1f << 3,
 
 	// All bits set (bits 3-7 are not currently used): 00000111
 	PACKET_PRIVATE_FLAGS_MAX = (1 << 3) - 1
@@ -836,6 +845,7 @@ struct NET_EXPORT_PRIVATE QuicPacketHeader {
   QuicPacketEntropyHash entropy_hash;
   InFecGroup is_in_fec_group;
   QuicFecGroupNumber fec_group;
+  FecConfiguration fec_configuration;
 };
 
 struct NET_EXPORT_PRIVATE QuicPublicResetPacket {

@@ -367,8 +367,7 @@ class NET_EXPORT_PRIVATE QuicPacketCreator {
 	  base::StringPiece payload);
 
   //void FillPacketHeader(QuicPacketHeader* header);
-  void FillPacketHeader(QuicFecGroupNumber fec_group,
-	  bool fec_flag,
+  void FillPacketHeader(bool fec_flag,
 	  QuicPacketHeader* header);
 
   // Adds a |frame| if there is space and returns false and flushes all pending

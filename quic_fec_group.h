@@ -33,8 +33,10 @@ class NET_EXPORT_PRIVATE QuicFecGroup {
 
 
  public:
-  explicit QuicFecGroup(QuicPacketNumber fec_group_number);
+  explicit QuicFecGroup(QuicPacketNumber fec_group_number, FecConfiguration fec_configuration);
   virtual ~QuicFecGroup();
+
+  FecConfiguration fec_configuration;
 
   bool UpdateReceivedList(EncryptionLevel encryption_level,
               const QuicPacketHeader& header,

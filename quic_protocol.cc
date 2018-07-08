@@ -22,6 +22,7 @@ const char* const kFinalOffsetHeaderKey = ":final-offset";
 // default values
 size_t kDefaultMaxPacketsPerFecGroup = 20;  // default k=20
 size_t kDefaultRecoveryBlocksCount = 10;	// default m=10
+FecConfiguration current_fec_configuration = FEC_100_5; // defualt 100:5
 bool useFec = false;
 bool useRetransmission = true;
 

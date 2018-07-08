@@ -182,7 +182,8 @@ InFecGroup QuicPacketCreator::MaybeUpdateLengthsAndStartFec() {
 	}
 	// Start a new FEC group since protection is on. Set the fec group number to
 	// the packet number of the next packet.
-	fec_group_.reset(new QuicFecGroup(packet_.packet_number + 1));
+	// Set fec configuration according to the current packet-loss
+	fec_group_.reset(new QuicFecGroup(packet_.packet_number + 1, current_fec_configuration));
 	return IN_FEC_GROUP;
 }
 
@@ -672,8 +673,7 @@ void QuicPacketCreator::SerializePacket(char* encrypted_buffer,
   QUIC_BUG_IF(queued_frames_.empty()) << "Attempt to serialize empty packet";
   QuicPacketHeader header;
   // FillPacketHeader increments packet_number_.
-  FillPacketHeader(fec_group_ != nullptr ? fec_group_->FecGroupNumber() : 0,
-	  false, &header);
+  FillPacketHeader(false, &header);
 
   MaybeAddPadding();
 
@@ -736,8 +736,7 @@ SerializedPacket QuicPacketCreator::NoPacket() {
 }
 
 //void QuicPacketCreator::FillPacketHeader(QuicPacketHeader* header) {
-void QuicPacketCreator::FillPacketHeader(QuicFecGroupNumber fec_group,
-	bool fec_flag,
+void QuicPacketCreator::FillPacketHeader(bool fec_flag,
 	QuicPacketHeader* header) {
   header->public_header.connection_id = connection_id_;
   header->public_header.connection_id_length = connection_id_length_;
@@ -755,10 +754,12 @@ void QuicPacketCreator::FillPacketHeader(QuicFecGroupNumber fec_group,
   header->public_header.packet_number_length = packet_.packet_number_length;
   header->entropy_flag = random_bool_source_.RandBool();
 
-
+  QuicFecGroupNumber fec_group = fec_group_ != nullptr ? fec_group_->FecGroupNumber() : 0;
   header->fec_flag = fec_flag;
   header->is_in_fec_group = fec_group == 0 ? NOT_IN_FEC_GROUP : IN_FEC_GROUP;
   header->fec_group = fec_group;
+  header->fec_configuration = fec_group_ != nullptr ? fec_group_->fec_configuration : FEC_100_5; // put default. not used
+
 }
 
 bool QuicPacketCreator::ShouldRetransmit(const QuicFrame& frame) {
@@ -909,7 +910,7 @@ void QuicPacketCreator::SerializeFec() {
 		header.public_header.multipath_flag = send_path_id_in_packet_;
 
 		// will choose the packet number automatically . we will override it
-		FillPacketHeader(fec_group_->FecGroupNumber(), true, &header);
+		FillPacketHeader(true, &header);
 		header.packet_number = (*it)->packet_number;
 
 		std::unique_ptr<QuicPacket> packet(framer_->BuildFecPacket(header, StringPiece((*it)->packet_data)));

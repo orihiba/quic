@@ -20,8 +20,9 @@ using std::set;
 
 namespace net {
 
-QuicFecGroup::QuicFecGroup(QuicPacketNumber fec_group_number) 
-    : min_protected_packet_(fec_group_number),
+QuicFecGroup::QuicFecGroup(QuicPacketNumber fec_group_number, FecConfiguration fec_configuration)
+    : fec_configuration(fec_configuration),
+	  min_protected_packet_(fec_group_number),
       max_protected_packet_(fec_group_number + kDefaultMaxPacketsPerFecGroup - 1),
       payload_parity_len_(0),
 	block_count_(kDefaultMaxPacketsPerFecGroup),
