@@ -289,9 +289,10 @@ QuicConnection::QuicConnection(QuicConnectionId connection_id,
       mtu_discovery_alarm_(alarm_factory_->CreateAlarm(
           arena_.New<MtuDiscoveryAlarmDelegate>(this),
           &arena_)),
-	// peek_alarm_(
-		// alarm_factory_->CreateAlarm(arena_.New<PeekAlarmDelegate>(this),
-			// &arena_)),
+	peek_alarm_(
+		alarm_factory_->CreateAlarm(arena_.New<PeekAlarmDelegate>(this),
+			&arena_)),
+	should_write_(true),
       visitor_(nullptr),
       debug_visitor_(nullptr),
       packet_generator_(connection_id_,
@@ -1242,9 +1243,7 @@ const QuicFrame QuicConnection::GetUpdatedAckFrame() {
 
 void QuicConnection::PopulateStopWaitingFrame(
     QuicStopWaitingFrame* stop_waiting) {
-         DVLOG(1) << "in PopulateStopWaitingFrame";
   stop_waiting->least_unacked = GetLeastUnacked(stop_waiting->path_id);
-   DVLOG(1) << "least unacked is " << stop_waiting->least_unacked;
   if (version() <= QUIC_VERSION_33) {
     stop_waiting->entropy_hash = sent_entropy_manager_.GetCumulativeEntropy(
         stop_waiting->least_unacked - 1);
@@ -1311,13 +1310,13 @@ QuicConsumedData QuicConnection::SendStreamData(
     return QuicConsumedData(0, false);
   }
   
-  // if (!peek_alarm_->IsSet() && perspective_ == Perspective::IS_SERVER)
-  // {
-// //	 peek_alarm_->Set(clock_->ApproximateNow() + peek_active_time_);
-	// // peek_alarm_->Set(clock_->Now() + QuicTime::Delta::FromMilliseconds(500));
-	 // peek_alarm_->Set(clock_->Now() + QuicTime::Delta::FromMilliseconds(200));
+  if (!peek_alarm_->IsSet() && perspective_ == Perspective::IS_SERVER)
+  {
+//	 peek_alarm_->Set(clock_->ApproximateNow() + peek_active_time_);
+	// peek_alarm_->Set(clock_->Now() + QuicTime::Delta::FromMilliseconds(500));
+	 peek_alarm_->Set(clock_->Now() + QuicTime::Delta::FromMilliseconds(200));
 
-  // }
+  }
 
   // Opportunistically bundle an ack with every outgoing packet.
   // Particularly, we want to bundle with handshake packets since we don't know
@@ -1427,12 +1426,12 @@ void QuicConnection::ProcessUdpPacket(const IPEndPoint& self_address,
     return;
   }
   if (perspective_ == Perspective::IS_CLIENT) {
-	 if (/*(number_of_packets >= 3 && number_of_packets <= 5) ||*/ (number_of_packets >= 6 && number_of_packets <= 10)/* || (number_of_packets >= 42 && number_of_packets <= 12312)*/ /*|| (number_of_packets >= 29 && number_of_packets <= 33) || (number_of_packets >= 36 && number_of_packets <= 40)*/)
-	 {
-		  number_of_packets++;
-		  return;
-	 }
-	 number_of_packets++;
+	 // if (/*(number_of_packets >= 3 && number_of_packets <= 5) ||*/ (number_of_packets >= 6 && number_of_packets <= 15)/* || (number_of_packets >= 42 && number_of_packets <= 12312)*/ /*|| (number_of_packets >= 29 && number_of_packets <= 33) || (number_of_packets >= 36 && number_of_packets <= 40)*/)
+	 // {
+	//	  number_of_packets++;
+	//	  return;
+	 // }
+	 // number_of_packets++;
   }
 
   if (debug_visitor_ != nullptr) {
@@ -1750,15 +1749,15 @@ bool QuicConnection::CanWrite(HasRetransmittableData retransmittable) {
 }
 
 bool QuicConnection::WritePacket(SerializedPacket* packet) {
-	// if (peek_alarm_->IsSet() && peek_alarm_->deadline() <= clock_->Now())
-	// {
-		// OnPeekTimeout();
-	// }
-	// if (!should_write_)
-	// {
-		// DVLOG(1) << "NOT WRITING! " << packet->packet_number << ":" << packet->has_crypto_handshake << ":" << packet->transmission_type;
-		// return false;
-	// }
+	if (peek_alarm_->IsSet() && peek_alarm_->deadline() <= clock_->Now())
+	{
+		OnPeekTimeout();
+	}
+	if (!should_write_)
+	{
+		DVLOG(1) << "NOT WRITING! " << packet->packet_number << ":" << packet->has_crypto_handshake << ":" << packet->transmission_type;
+		return false;
+	}
   if (packet->packet_number < 
       sent_packet_manager_->GetLargestSentPacket(packet->path_id)) {
     QUIC_BUG << "Attempt to write packet:" << packet->packet_number << " after:"
@@ -2097,26 +2096,25 @@ void QuicConnection::SendPing() {
   }
 }
 
-// void QuicConnection::OnPeekTimeout() {
-	// if (should_write_)
-	// {
-		// // turn off
- 		// peek_alarm_->Update(clock_->Now() + QuicTime::Delta::FromMilliseconds(1500), QuicTime::Delta::Zero());
-		// //peek_alarm_->Update(clock_->ApproximateNow() + peek_idle_time_, QuicTime::Delta::Zero());
-	// //	should_write_ = false;
-	// }
-	// else
-	// {
-		// // turn on
-		// // + peek_active_time_
-		// peek_alarm_->Update(clock_->Now() + QuicTime::Delta::FromMilliseconds(1), QuicTime::Delta::Zero());
-		// should_write_ = true;
-		// WriteAndBundleAcksIfNotBlocked();
-	// }
-// }
+void QuicConnection::OnPeekTimeout() {
+	if (should_write_)
+	{
+		// turn off
+ 		peek_alarm_->Update(clock_->Now() + QuicTime::Delta::FromMilliseconds(1500), QuicTime::Delta::Zero());
+		//peek_alarm_->Update(clock_->ApproximateNow() + peek_idle_time_, QuicTime::Delta::Zero());
+	//	should_write_ = false;
+	}
+	else
+	{
+		// turn on
+		// + peek_active_time_
+		peek_alarm_->Update(clock_->Now() + QuicTime::Delta::FromMilliseconds(1), QuicTime::Delta::Zero());
+		should_write_ = true;
+		WriteAndBundleAcksIfNotBlocked();
+	}
+}
 
 void QuicConnection::SendAck() {
-     DVLOG(1) << "sending ack";
   ack_alarm_->Cancel();
   ack_queued_ = false;
   stop_waiting_count_ = 0;
@@ -2271,8 +2269,6 @@ void QuicConnection::MaybeProcessRevivedPacket() {
 		revived_header.public_header.version_flag = false;
 		revived_header.public_header.reset_flag = false;
 		revived_header.public_header.packet_number_length = it->packet_number_len;
-        DVLOG(1) << "revived packet number " << it->packet_number << " has number len: " << it->packet_number_len;
-
 		revived_header.fec_flag = false;
 		revived_header.is_in_fec_group = NOT_IN_FEC_GROUP;
 		revived_header.fec_group = last_header_.fec_group;
@@ -2393,7 +2389,7 @@ void QuicConnection::CancelAllAlarms() {
   send_alarm_->Cancel();
   timeout_alarm_->Cancel();
   mtu_discovery_alarm_->Cancel();
-  // peek_alarm_->Cancel();
+  peek_alarm_->Cancel();
 }
 
 void QuicConnection::SendGoAway(QuicErrorCode error,
@@ -2573,8 +2569,8 @@ void QuicConnection::SetRetransmissionAlarm() {
     pending_retransmission_alarm_ = true;
     return;
   }
-   QuicTime retransmission_time = sent_packet_manager_->GetRetransmissionTime();
- retransmission_alarm_->Update(retransmission_time, // TODO HIBA
+  QuicTime retransmission_time = sent_packet_manager_->GetRetransmissionTime();
+ retransmission_alarm_->Update(retransmission_time, //TODO HIBA
  // retransmission_alarm_->Update(clock_->Now() + QuicTime::Delta::FromSeconds(50),
                                 QuicTime::Delta::FromMilliseconds(1)); 
 	  

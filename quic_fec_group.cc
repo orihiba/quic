@@ -203,6 +203,7 @@ std::list<ParityPacket> QuicFecGroup::getRevivedPackets()
 		unsigned short len = *(unsigned short*)payload;
 		unsigned short packet_number_len = len >> 14;
 		len &= 0x3fff;
+
 		revived_packets.push_back(ParityPacket(*it, StringPiece((char *)payload + 2, len).as_string(), (QuicPacketNumberLength)packet_number_len));
 	}
 

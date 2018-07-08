@@ -175,10 +175,8 @@ InFecGroup QuicPacketCreator::MaybeUpdateLengthsAndStartFec() {
 		// Don't change creator state if there are frames queued.
 		return NOT_IN_FEC_GROUP;
 	}
-	// Update packet number length only on packet and FEC group boundaries.
-    DVLOG(1) << "before " << packet_.packet_number_length;
+	// Update packet number length only on packet and FEC group boundaries. -- causes bugs
 	//packet_.packet_number_length = next_packet_number_length_;
-    DVLOG(1) << "after " <<packet_.packet_number_length;
 	if (!fec_protect_) {
 		return NOT_IN_FEC_GROUP;
 	}
@@ -272,10 +270,8 @@ void QuicPacketCreator::UpdatePacketNumberLength(
   const QuicPacketNumber current_delta =
       packet_.packet_number + 1 - least_packet_awaited_by_peer;
   const uint64_t delta = max(current_delta, max_packets_in_flight);
-  DVLOG(1) << "before " << packet_.packet_number_length;
   packet_.packet_number_length =
       QuicFramer::GetMinSequenceNumberLength(delta * 4);
-      DVLOG(1) << "after " << packet_.packet_number_length;
 }
 
 bool QuicPacketCreator::ConsumeData(QuicStreamId id,
@@ -461,9 +457,7 @@ void QuicPacketCreator::ReserializeAllFrames(
   const EncryptionLevel default_encryption_level = packet_.encryption_level;
 
   // Temporarily set the packet number length and change the encryption level.
-  DVLOG(1) << "before " << packet_.packet_number_length;
   packet_.packet_number_length = retransmission.packet_number_length;
-  DVLOG(1) << "after " << packet_.packet_number_length;
   packet_.num_padding_bytes = retransmission.num_padding_bytes;
   // Only preserve the original encryption level if it's a handshake packet or
   // if we haven't gone forward secure.
@@ -758,9 +752,7 @@ void QuicPacketCreator::FillPacketHeader(QuicFecGroupNumber fec_group,
   }
   header->path_id = packet_.path_id;
   header->packet_number = ++packet_.packet_number;
-  DVLOG(1) << "before " <<  header->public_header.packet_number_length;
   header->public_header.packet_number_length = packet_.packet_number_length;
-  DVLOG(1) << "after " <<  header->public_header.packet_number_length;
   header->entropy_flag = random_bool_source_.RandBool();
 
 

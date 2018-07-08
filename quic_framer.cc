@@ -762,10 +762,6 @@ bool QuicFramer::ProcessRevivedPacket(QuicPacketHeader* header,
 		return true;
 	}
 
-    
-    DVLOG(1) << QuicUtils::HexDump(payload) << std::endl;
-
-    
 	if (payload.length() > kMaxPacketSize) {
 		set_detailed_error("Revived packet too large.");
 		return RaiseError(QUIC_PACKET_TOO_LARGE);
@@ -1285,7 +1281,6 @@ bool QuicFramer::ProcessFrameData(QuicDataReader* reader,
     return RaiseError(QUIC_MISSING_PAYLOAD);
   }
   while (!reader->IsDoneReading()) {
-       DVLOG(1) << "in while";
     uint8_t frame_type;
     if (!reader->ReadBytes(&frame_type, 1)) {
       set_detailed_error("Unable to read frame type.");
@@ -1293,7 +1288,6 @@ bool QuicFramer::ProcessFrameData(QuicDataReader* reader,
     }
 
     if (frame_type & kQuicFrameTypeSpecialMask) {
-         DVLOG(1) << "stream frame";
       // Stream Frame
       if (frame_type & kQuicFrameTypeStreamMask) {
         QuicStreamFrame frame;
@@ -1310,7 +1304,6 @@ bool QuicFramer::ProcessFrameData(QuicDataReader* reader,
 
       // Ack Frame
       if (frame_type & kQuicFrameTypeAckMask) {
-           DVLOG(1) << "ack frame";
         QuicAckFrame frame;
         if (quic_version_ <= QUIC_VERSION_33) {
           if (!ProcessAckFrame(reader, frame_type, &frame)) {
@@ -1413,7 +1406,6 @@ bool QuicFramer::ProcessFrameData(QuicDataReader* reader,
       }
 
       case STOP_WAITING_FRAME: {
-           DVLOG(1) << "stop waiting";
         QuicStopWaitingFrame stop_waiting_frame;
         if (!ProcessStopWaitingFrame(reader, header, &stop_waiting_frame)) {
           return RaiseError(QUIC_INVALID_STOP_WAITING_DATA);
@@ -1990,7 +1982,7 @@ bool QuicFramer::DecryptPayload(QuicDataReader* encrypted_reader,
       header.public_header.version_flag, header.public_header.multipath_flag,
       header.public_header.nonce != nullptr,
       header.public_header.packet_number_length);
- DVLOG(1) << "packet number len is " << header.public_header.packet_number_length;
+
   bool success = decrypter_->DecryptPacket(
       header.path_id, header.packet_number, associated_data, encrypted,
       decrypted_buffer, decrypted_length, buffer_length);
@@ -2615,10 +2607,6 @@ bool QuicFramer::AppendStopWaitingFrame(const QuicPacketHeader& header,
   DCHECK_GE(header.packet_number, frame.least_unacked);
   const QuicPacketNumber least_unacked_delta =
       header.packet_number - frame.least_unacked;
-     
-    DVLOG(1) << "now least is " << least_unacked_delta << " beacause "<< header.packet_number<< " and " << frame.least_unacked;
-
-      
   const QuicPacketNumber length_shift =
       header.public_header.packet_number_length * 8;
   if (quic_version_ <= QUIC_VERSION_33) {
