@@ -327,7 +327,10 @@ peek_idle_time_(QuicTime::Delta::FromSeconds(2)),
       goaway_sent_(false),
       goaway_received_(false),
       multipath_enabled_(false),
-      write_error_occured_(false) {
+      write_error_occured_(false),
+	  last_packets_sent(0),
+	  last_packets_received(0), 
+	  packets_received_heigher_bytes(0) {
   DVLOG(1) << ENDPOINT
            << "Created connection with connection_id: " << connection_id;
   framer_.set_visitor(this);
@@ -358,7 +361,7 @@ QuicConnection::~QuicConnection() {
   base::STLDeleteElements(&undecryptable_packets_);
   base::STLDeleteValues(&group_map_); 
   ClearQueuedPackets();
-  DVLOG(1) << std::endl << "Statistics: " << std::endl << "Total packets sent: " << sent_packet_manager_->getStats()->packets_sent << std::endl << "Packets received: " << sent_packet_manager_->getStats()->packets_received << std::endl << "Packets lost: " << sent_packet_manager_->GetUnackedNumber() << std::endl << "Packets revived: " << sent_packet_manager_->getStats()->packets_revived << std::endl << "Packets retransmited: " << sent_packet_manager_->getStats()->packets_retransmitted << std::endl;
+  DVLOG(1) << std::endl << "Statistics: " << std::endl << "Total packets sent: " << sent_packet_manager_->getStats()->packets_sent << std::endl << "Packets received: " << sent_packet_manager_->getStats()->packets_received << std::endl << "Packets lost: " << sent_packet_manager_->getStats()->packets_lost << std::endl << "Packets revived: " << sent_packet_manager_->getStats()->packets_revived << std::endl << "Packets retransmited: " << sent_packet_manager_->getStats()->packets_retransmitted << std::endl;
 
 }
 
@@ -769,6 +772,35 @@ bool QuicConnection::OnStreamFrame(const QuicStreamFrame& frame) {
   return connected_;
 }
 
+void QuicConnection::UpdateFecCofiguration(QuicPacketCount packets_received)
+{
+	//QuicPacketCount packets_retransmitted = sent_packet_manager_->getStats()->packets_retransmitted;
+	QuicPacketCount packets_sent = sent_packet_manager_->getStats()->packets_sent;
+	QuicPacketCount last_total_packets_received = packets_received_heigher_bytes + last_packets_received;
+
+	// overflow
+	if (last_packets_received > packets_received) {
+		packets_received_heigher_bytes += (1 << (8 * kPacketsReceivedNumberSize));
+	}
+	QuicPacketCount total_packets_received = packets_received_heigher_bytes + packets_received;
+
+	QuicPacketCount packets_sent_delta = last_packets_sent - packets_sent;
+	QuicPacketCount packets_received_delta = last_total_packets_received - total_packets_received;
+
+	last_packets_sent = packets_sent;
+	last_packets_received = packets_received;
+
+	DVLOG(1) << "packets_received:" << packets_received << ", and total packets_received:" << total_packets_received;
+
+	//DVLOG(1) << "packets_retransmitted:" << packets_retransmitted;
+
+	DVLOG(1) << "packets_sent:" << packets_sent;
+
+	if (packets_sent_delta) {
+		DVLOG(1) << "loss_rate: " << ((double)packets_sent_delta - packets_received_delta) / packets_sent_delta;
+	}
+}
+
 bool QuicConnection::OnAckFrame(const QuicAckFrame& incoming_ack) {
   DCHECK(connected_);
   if (debug_visitor_ != nullptr) {
@@ -812,6 +844,8 @@ bool QuicConnection::OnAckFrame(const QuicAckFrame& incoming_ack) {
   //if (GetLeastUnacked(incoming_ack.path_id) >= fec_group_->FecGroupNumber() + kDefaultMaxPacketsPerFecGroup - 1)
   //{
   //}
+
+  UpdateFecCofiguration(incoming_ack.packets_received_number);
 
   return connected_;
 }
@@ -1140,6 +1174,10 @@ void QuicConnection::OnPacketComplete() {
   MaybeProcessRevivedPacket();
 }
 
+QuicPacketCount QuicConnection::getPacketsReceivedNumber() {
+	return sent_packet_manager_->getStats()->packets_received;
+}
+
 void QuicConnection::MaybeQueueAck(bool was_missing) {
   ++num_packets_received_since_last_ack_sent_;
   // Always send an ack every 20 packets in order to allow the peer to discard
@@ -1420,20 +1458,20 @@ const QuicConnectionStats& QuicConnection::GetStats() {
 void QuicConnection::ProcessUdpPacket(const IPEndPoint& self_address,
                                       const IPEndPoint& peer_address,
                                       const QuicReceivedPacket& packet) {
-	//static int number_of_packets = 1;
+	static int number_of_packets = 1;
 	idle_timeout_alarm_->Update(clock_->ApproximateNow() + new_idle_network_timeout_, QuicTime::Delta::Zero());
 
   if (!connected_) {
     return;
   }
-  //if (perspective_ == Perspective::IS_CLIENT) {
-	 //if (/*(number_of_packets >= 3 && number_of_packets <= 5) ||*/ (number_of_packets >= 6 && number_of_packets <= 10)/* || (number_of_packets >= 42 && number_of_packets <= 12312)*/ /*|| (number_of_packets >= 29 && number_of_packets <= 33) || (number_of_packets >= 36 && number_of_packets <= 40)*/)
-	 //{
-		//  number_of_packets++;
-		//  return;
-	 //}
-	 //number_of_packets++;
-  //}
+  if (perspective_ == Perspective::IS_CLIENT) {
+	 if (/*(number_of_packets >= 3 && number_of_packets <= 5) ||*/ (number_of_packets >= 7 && number_of_packets <= 10) || (number_of_packets >= 65 && number_of_packets <= 66) /*|| (number_of_packets >= 29 && number_of_packets <= 33) || (number_of_packets >= 36 && number_of_packets <= 40)*/)
+	 {
+		  number_of_packets++;
+		  return;
+	 }
+	 number_of_packets++;
+  }
 
   if (debug_visitor_ != nullptr) {
     debug_visitor_->OnPacketReceived(self_address, peer_address, packet);
@@ -1893,7 +1931,7 @@ bool QuicConnection::WritePacket(SerializedPacket* packet) {
       packet, packet->original_path_id, packet->original_packet_number,
       packet_send_time, packet->transmission_type, IsRetransmittable(*packet));
 
-  if (reset_retransmission_alarm || !retransmission_alarm_->IsSet()) {
+  if (!packet->is_fec_packet && (reset_retransmission_alarm || !retransmission_alarm_->IsSet())) {
     SetRetransmissionAlarm();
   }
 
@@ -2291,6 +2329,9 @@ void QuicConnection::MaybeProcessRevivedPacket() {
 
 
 QuicFecGroup* QuicConnection::GetFecGroup() {
+	if (!useFec) {
+		return nullptr;
+	}
 	QuicFecGroupNumber fec_group_num = last_header_.fec_group;
 	if (fec_group_num == 0 ||
 		(fec_group_num <

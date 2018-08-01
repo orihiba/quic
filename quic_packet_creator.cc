@@ -55,6 +55,7 @@ QuicPacketCreator::QuicPacketCreator(QuicConnectionId connection_id,
 		0,
 		0,
 		false,
+		false,
 		false),
 	  should_fec_protect_next_packet_(false),
 	  fec_protect_(true),
@@ -732,7 +733,7 @@ QuicEncryptedPacket* QuicPacketCreator::SerializeVersionNegotiationPacket(
 // TODO(jri): Make this a public method of framer?
 SerializedPacket QuicPacketCreator::NoPacket() {
   return SerializedPacket(kInvalidPathId, 0, PACKET_1BYTE_PACKET_NUMBER,
-                          nullptr, 0, 0, false, false);
+                          nullptr, 0, 0, false, false, false);
 }
 
 //void QuicPacketCreator::FillPacketHeader(QuicPacketHeader* header) {
@@ -932,10 +933,18 @@ void QuicPacketCreator::SerializeFec() {
 		packet_.entropy_hash = QuicFramer::GetPacketEntropyHash(header);
 		packet_.encrypted_buffer = seralized_fec_buffer;
 		packet_.encrypted_length = encrypted_length;
-		
+		packet_.is_fec_packet = true;
 		DVLOG(1) << "serialized fec! number: " << header.packet_number << " size: " << packet_.encrypted_length << " || " << StringPiece((*it)->packet_data).size();
 		
 		OnSerializedPacket(true);
+
+		// instead? will be probelmatic during receiving
+		/*QuicFrame frame;
+		QuicIOVector io_vector(MakeIOVector(data));
+		ConsumeData(kClientDataStreamId1, io_vector, 0u,
+			kOffset, false, false, &frame);
+		size_t bytes_consumed = frame.stream_frame->data_length;
+		creator_.Flush();*/
 	}
 	fec_group_.reset(nullptr); 
 	packet_size_ = 0;

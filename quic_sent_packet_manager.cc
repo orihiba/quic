@@ -560,11 +560,11 @@ bool QuicSentPacketManager::OnPacketSent(
   if (using_pacing_) {
     in_flight = pacing_sender_.OnPacketSent(
         sent_time, unacked_packets_.bytes_in_flight(), packet_number,
-        serialized_packet->encrypted_length, has_retransmittable_data);
+        serialized_packet->encrypted_length, has_retransmittable_data, serialized_packet->is_fec_packet);
   } else {
     in_flight = send_algorithm_->OnPacketSent(
         sent_time, unacked_packets_.bytes_in_flight(), packet_number,
-        serialized_packet->encrypted_length, has_retransmittable_data);
+        serialized_packet->encrypted_length, has_retransmittable_data, serialized_packet->is_fec_packet);
   }
 
   unacked_packets_.AddSentPacket(serialized_packet, original_packet_number,

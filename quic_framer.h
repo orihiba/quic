@@ -62,6 +62,8 @@ const size_t kMaxNackRanges = (1 << (kNumberOfNackRangesSize * 8)) - 1;
 // Maximum number of ack blocks that can fit within an ack frame.
 const size_t kMaxAckBlocks = (1 << (kNumberOfAckBlocksSize * 8)) - 1;
 
+const size_t kPacketsReceivedNumberSize = 2;
+
 // This class receives callbacks from the framer when packets
 // are processed.
 class NET_EXPORT_PRIVATE QuicFramerVisitorInterface {
@@ -157,6 +159,8 @@ class NET_EXPORT_PRIVATE QuicFramerVisitorInterface {
 
   // Called when a packet has been completely processed.
   virtual void OnPacketComplete() = 0;
+
+  virtual QuicPacketCount getPacketsReceivedNumber() = 0;
 };
 
 // This class calculates the received entropy of the ack packet being

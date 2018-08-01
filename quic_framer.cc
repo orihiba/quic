@@ -853,7 +853,7 @@ bool QuicFramer::AppendPacketHeader(const QuicPacketHeader& header,
   }
   if (header.is_in_fec_group == IN_FEC_GROUP) {
 	  private_flags |= PACKET_PRIVATE_FLAGS_FEC_GROUP;
-	  //private_flags |= currentFecConfiguration()
+	  private_flags |= header.fec_configuration << 3;
   }
   if (header.fec_flag) {
 	  private_flags |= PACKET_PRIVATE_FLAGS_FEC;
@@ -1654,6 +1654,13 @@ bool QuicFramer::ProcessNewAckFrame(QuicDataReader* reader,
     }
   }
 
+  int packets_received_number = 0;
+  if (!reader->ReadBytes(&packets_received_number, kPacketsReceivedNumberSize)) {
+	  set_detailed_error("Unable to read packets_received_number from ack frame.");
+	  return false;
+  }
+  ack_frame->packets_received_number = packets_received_number;
+
   if (!ProcessTimestampsInAckFrame(reader, ack_frame)) {
     return false;
   }
@@ -2093,6 +2100,9 @@ size_t QuicFramer::GetAckFrameSize(
                 (ack_block_length + PACKET_1BYTE_PACKET_NUMBER);
   }
 
+  // Include packets_received_number
+  ack_size += kPacketsReceivedNumberSize;
+
   // Include timestamps.
   ack_size += GetAckFrameTimeStampSize(ack);
 
@@ -2519,6 +2529,12 @@ bool QuicFramer::AppendNewAckFrameAndTypeByte(const QuicAckFrame& frame,
       ++num_ack_blocks_written;
     }
     DCHECK_EQ(num_ack_blocks, num_ack_blocks_written);
+  }
+
+  // writing only kPacketsReceivedNumberSize low bytes
+  QuicPacketCount packets_received_number = visitor_->getPacketsReceivedNumber();
+  if (!writer->WriteBytes(&packets_received_number, kPacketsReceivedNumberSize)) {
+	  return false;
   }
 
   // Timestamps.

@@ -1124,6 +1124,8 @@ struct NET_EXPORT_PRIVATE QuicAckFrame {
   // If true, |packets| express missing packets. Otherwise, |packets| express
   // received packets.
   bool missing;
+
+  QuicPacketCount packets_received_number;
 };
 
 // True if the packet number is greater than largest_observed or is listed
@@ -1522,7 +1524,8 @@ struct NET_EXPORT_PRIVATE SerializedPacket {
                    QuicPacketLength encrypted_length,
                    QuicPacketEntropyHash entropy_hash,
                    bool has_ack,
-                   bool has_stop_waiting);
+                   bool has_stop_waiting,
+				   bool is_fec_packet);
   SerializedPacket(const SerializedPacket& other);
   ~SerializedPacket();
 
@@ -1545,7 +1548,7 @@ struct NET_EXPORT_PRIVATE SerializedPacket {
   TransmissionType transmission_type;
   QuicPathId original_path_id;
   QuicPacketNumber original_packet_number;
-  //bool is_fec_packet;
+  bool is_fec_packet;
   // Optional notifiers which will be informed when this packet has been ACKed.
   std::list<AckListenerWrapper> listeners;
 };
@@ -1562,7 +1565,8 @@ struct NET_EXPORT_PRIVATE TransmissionInfo {
                    QuicTime sent_time,
                    QuicPacketLength bytes_sent,
                    bool has_crypto_handshake,
-                   int num_padding_bytes);
+                   int num_padding_bytes,
+				   bool is_fec);
 
   TransmissionInfo(const TransmissionInfo& other);
 
@@ -1590,6 +1594,9 @@ struct NET_EXPORT_PRIVATE TransmissionInfo {
   QuicPacketNumber retransmission;
   // Non-empty if there is a listener for this packet.
   std::list<AckListenerWrapper> ack_listeners;
+
+  // Is the packet a FEC packet. If so, treat deifferently when detecting losses.
+  bool is_fec;
 };
 
 // Struct to store the pending retransmission information.

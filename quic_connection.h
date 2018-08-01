@@ -463,6 +463,10 @@ class NET_EXPORT_PRIVATE QuicConnection
   void OnFecProtectedPayload(base::StringPiece payload) override;
   void OnFecData(base::StringPiece redundnancy) override;
   void OnPacketComplete() override;
+  QuicPacketCount getPacketsReceivedNumber() override;
+
+  void UpdateFecCofiguration(QuicPacketCount packets_received_number);
+
 
   // QuicConnectionCloseDelegateInterface
   void OnUnrecoverableError(QuicErrorCode error,
@@ -1150,6 +1154,10 @@ class NET_EXPORT_PRIVATE QuicConnection
   // Indicates whether a write error is encountered currently. This is used to
   // avoid infinite write errors.
   bool write_error_occured_;
+
+  QuicPacketCount last_packets_sent;
+  QuicPacketCount last_packets_received;
+  QuicPacketCount packets_received_heigher_bytes;
 
   DISALLOW_COPY_AND_ASSIGN(QuicConnection);
 };

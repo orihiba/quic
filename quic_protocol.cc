@@ -871,7 +871,8 @@ SerializedPacket::SerializedPacket(QuicPathId path_id,
                                    QuicPacketLength encrypted_length,
                                    QuicPacketEntropyHash entropy_hash,
                                    bool has_ack,
-                                   bool has_stop_waiting)
+                                   bool has_stop_waiting,
+								   bool is_fec_packet)
     : encrypted_buffer(encrypted_buffer),
       encrypted_length(encrypted_length),
       has_crypto_handshake(NOT_HANDSHAKE),
@@ -885,7 +886,8 @@ SerializedPacket::SerializedPacket(QuicPathId path_id,
       has_stop_waiting(has_stop_waiting),
       transmission_type(NOT_RETRANSMISSION),
       original_path_id(kInvalidPathId),
-      original_packet_number(0) {}
+      original_packet_number(0),
+	  is_fec_packet(is_fec_packet) {}
 
 SerializedPacket::SerializedPacket(const SerializedPacket& other) = default;
 
@@ -909,7 +911,8 @@ TransmissionInfo::TransmissionInfo(EncryptionLevel level,
                                    QuicTime sent_time,
                                    QuicPacketLength bytes_sent,
                                    bool has_crypto_handshake,
-                                   int num_padding_bytes)
+                                   int num_padding_bytes,
+								   bool is_fec)
     : encryption_level(level),
       packet_number_length(packet_number_length),
       bytes_sent(bytes_sent),
@@ -919,7 +922,8 @@ TransmissionInfo::TransmissionInfo(EncryptionLevel level,
       is_unackable(false),
       has_crypto_handshake(has_crypto_handshake),
       num_padding_bytes(num_padding_bytes),
-      retransmission(0) {}
+      retransmission(0),
+	  is_fec(is_fec) {}
 
 TransmissionInfo::TransmissionInfo(const TransmissionInfo& other) = default;
 
