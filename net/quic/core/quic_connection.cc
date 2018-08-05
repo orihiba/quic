@@ -330,7 +330,10 @@ peek_idle_time_(QuicTime::Delta::FromSeconds(2)),
       write_error_occured_(false),
 	  last_packets_sent(0),
 	  last_packets_received(0), 
-	  packets_received_heigher_bytes(0) {
+	  packets_received_heigher_bytes(0),
+	  total_loss_rate(0),
+	  packet_deltas(),
+	  total_packet_deltas(0) {
   DVLOG(1) << ENDPOINT
            << "Created connection with connection_id: " << connection_id;
   framer_.set_visitor(this);
@@ -774,7 +777,6 @@ bool QuicConnection::OnStreamFrame(const QuicStreamFrame& frame) {
 
 void QuicConnection::UpdateFecCofiguration(QuicPacketCount packets_received)
 {
-	//QuicPacketCount packets_retransmitted = sent_packet_manager_->getStats()->packets_retransmitted;
 	QuicPacketCount packets_sent = sent_packet_manager_->getStats()->packets_sent;
 	QuicPacketCount last_total_packets_received = packets_received_heigher_bytes + last_packets_received;
 
@@ -784,21 +786,66 @@ void QuicConnection::UpdateFecCofiguration(QuicPacketCount packets_received)
 	}
 	QuicPacketCount total_packets_received = packets_received_heigher_bytes + packets_received;
 
-	QuicPacketCount packets_sent_delta = last_packets_sent - packets_sent;
-	QuicPacketCount packets_received_delta = last_total_packets_received - total_packets_received;
+	// deltas
+	QuicPacketCount packets_sent_delta = packets_sent - last_packets_sent;
+	QuicPacketCount packets_received_delta = total_packets_received - last_total_packets_received;
 
+	
+	DVLOG(1) << "packets_received:" << packets_received << ", and total packets_received:" << total_packets_received;
+	DVLOG(1) << "packets_sent:" << packets_sent;
+
+	DVLOG(1) << "packets_received_delta:" << packets_received_delta;
+	DVLOG(1) << "packets_sent_delta:" << packets_sent_delta;
+
+	if ((packets_sent_delta == 0) || (packets_received_delta >= packets_sent_delta)) {
+		// not updating last items, so next sample will handle those values
+		DVLOG(1) << "packets_sent_delta is 0. doing nothing";
+		return;
+	}
+	QuicPacketCount curr_total_packet_deltas = packets_sent_delta + packets_received_delta;
+
+	packet_deltas.push_back(curr_total_packet_deltas);
+	total_packet_deltas += curr_total_packet_deltas;
+
+	if (packet_deltas.size() > 100) {
+		QuicPacketCount first_item = packet_deltas.front();
+		packet_deltas.erase(packet_deltas.begin());
+		total_packet_deltas -= first_item;
+	}
+
+	double weight = (double)curr_total_packet_deltas / total_packet_deltas;
+	DVLOG(1) << "weight:" << weight;
+	double curr_loss_rate = ((double)packets_sent_delta - (double)packets_received_delta) / (double)packets_sent_delta;
+	DVLOG(1) << "loss_rate: " << curr_loss_rate;
+	DVLOG(1) << "total_loss_rate before: " << total_loss_rate;
+	total_loss_rate = total_loss_rate * (1 - weight) + curr_loss_rate * weight;
+	DVLOG(1) << "total_loss_rate after: " << total_loss_rate;
+
+	// update last
 	last_packets_sent = packets_sent;
 	last_packets_received = packets_received;
 
-	DVLOG(1) << "packets_received:" << packets_received << ", and total packets_received:" << total_packets_received;
-
-	//DVLOG(1) << "packets_retransmitted:" << packets_retransmitted;
-
-	DVLOG(1) << "packets_sent:" << packets_sent;
-
-	if (packets_sent_delta) {
-		DVLOG(1) << "loss_rate: " << ((double)packets_sent_delta - packets_received_delta) / packets_sent_delta;
+	int loss_rate_group = (total_loss_rate * 100) / 2.5;
+	switch (loss_rate_group) {
+	case 0:
+	case 1:
+	case 2:
+		current_fec_configuration = FEC_100_5;
+		break;
+	case 3:
+		current_fec_configuration = FEC_50_5;
+		break;
+	case 4:
+		current_fec_configuration = FEC_20_5;
+		break;
+	case 5:
+		current_fec_configuration = FEC_15_5;
+		break;
+	default: // high loss rate
+		current_fec_configuration = FEC_10_5;
+		break;
 	}
+	
 }
 
 bool QuicConnection::OnAckFrame(const QuicAckFrame& incoming_ack) {
@@ -2354,6 +2401,7 @@ QuicFecGroup* QuicConnection::GetFecGroup() {
 			delete group_map_.begin()->second;
 			group_map_.erase(group_map_.begin());
 		}
+		VLOG(1) << "fec_configuration: " << last_header_.fec_configuration;
 		group_map_[fec_group_num] = new QuicFecGroup(fec_group_num, last_header_.fec_configuration);
 	}
 	return group_map_[fec_group_num];

@@ -1158,6 +1158,9 @@ class NET_EXPORT_PRIVATE QuicConnection
   QuicPacketCount last_packets_sent;
   QuicPacketCount last_packets_received;
   QuicPacketCount packets_received_heigher_bytes;
+  double total_loss_rate;
+  std::vector<QuicPacketCount> packet_deltas;
+  QuicPacketCount total_packet_deltas;
 
   DISALLOW_COPY_AND_ASSIGN(QuicConnection);
 };
