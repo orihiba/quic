@@ -285,15 +285,15 @@ class NET_EXPORT_PRIVATE QuicPacketCreator {
   void SetMaxPacketLength(QuicByteCount length);
 
   // Returns current max number of packets covered by an FEC group.
-  size_t max_packets_per_fec_group() const {
+ /* size_t max_packets_per_fec_group() const {
 	  return max_packets_per_fec_group_;
-  }
+  }*/
 
   // Sets creator's max number of packets covered by an FEC group.
   // Note: While there are no constraints on |max_packets_per_fec_group|,
   // this setter enforces a min value of kLowestMaxPacketsPerFecGroup.
   // To turn off FEC protection, use StopFecProtectingPackets().
-  void set_max_packets_per_fec_group(size_t max_packets_per_fec_group);
+  //void set_max_packets_per_fec_group(size_t max_packets_per_fec_group);
 
    // Sets the path on which subsequent packets will be created. It is the
   // caller's responsibility to guarantee no packet is under construction before
@@ -455,7 +455,7 @@ class NET_EXPORT_PRIVATE QuicPacketCreator {
   // one variable.
   bool fec_protect_;
   // 0 indicates FEC is disabled.
-  size_t max_packets_per_fec_group_;
+  //size_t max_packets_per_fec_group_;
   std::unique_ptr<QuicFecGroup> fec_group_;
 
   // Timeout used for FEC alarm. Can be set to zero initially or if the SRTT has

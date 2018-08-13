@@ -1512,7 +1512,7 @@ void QuicConnection::ProcessUdpPacket(const IPEndPoint& self_address,
     return;
   }
   if (perspective_ == Perspective::IS_CLIENT) {
-	 if (/*(number_of_packets >= 3 && number_of_packets <= 5) ||*/ (number_of_packets >= 7 && number_of_packets <= 10) || (number_of_packets >= 65 && number_of_packets <= 66) /*|| (number_of_packets >= 29 && number_of_packets <= 33) || (number_of_packets >= 36 && number_of_packets <= 40)*/)
+	 if (/*(number_of_packets >= 3 && number_of_packets <= 5) ||*/ (number_of_packets >= 7 && number_of_packets <= 10)/* || (number_of_packets >= 65 && number_of_packets <= 66)*/ /*|| (number_of_packets >= 29 && number_of_packets <= 33) || (number_of_packets >= 36 && number_of_packets <= 40)*/)
 	 {
 		  number_of_packets++;
 		  return;

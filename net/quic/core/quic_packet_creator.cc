@@ -59,7 +59,7 @@ QuicPacketCreator::QuicPacketCreator(QuicConnectionId connection_id,
 		false),
 	  should_fec_protect_next_packet_(false),
 	  fec_protect_(true),
-	  max_packets_per_fec_group_(kDefaultMaxPacketsPerFecGroup),
+	  //max_packets_per_fec_group_(kDefaultMaxPacketsPerFecGroup),
      
 	fec_timeout_(QuicTime::Delta::Zero())
 {
@@ -103,19 +103,19 @@ void QuicPacketCreator::SetMaxPacketLength(QuicByteCount length) {
   max_packet_length_ = length;
   max_plaintext_size_ = framer_->GetMaxPlaintextSize(max_packet_length_);
 }
-void QuicPacketCreator::set_max_packets_per_fec_group(
-	size_t max_packets_per_fec_group) {
-	max_packets_per_fec_group_ = max(kLowestMaxPacketsPerFecGroup,
-		max_packets_per_fec_group);
-	DCHECK_LT(0u, max_packets_per_fec_group_);
-}
+//void QuicPacketCreator::set_max_packets_per_fec_group(
+//	size_t max_packets_per_fec_group) {
+//	max_packets_per_fec_group_ = max(kLowestMaxPacketsPerFecGroup,
+//		max_packets_per_fec_group);
+//	DCHECK_LT(0u, max_packets_per_fec_group_);
+//}
 
 bool QuicPacketCreator::ShouldSendFec(bool force_close) const {
 	DCHECK(!HasPendingFrames());
 	return fec_group_.get() != nullptr && fec_group_->NumSentPackets() > 0 &&
 		(force_close ||
 	//	fec_group_->NumSentPackets() >= max_packets_per_fec_group_);
-		fec_group_->NumSentPackets() >= kDefaultMaxPacketsPerFecGroup);
+		fec_group_->NumSentPackets() >= k_from_conf(fec_group_->fec_configuration));
 }
 
 void QuicPacketCreator::ResetFecGroup() {
@@ -163,7 +163,8 @@ bool QuicPacketCreator::IsFecProtected() const {
 }
 
 bool QuicPacketCreator::IsFecEnabled() const {
-	return max_packets_per_fec_group_ > 0;
+	return true;
+	//return max_packets_per_fec_group_ > 0;
 }
 
 InFecGroup QuicPacketCreator::MaybeUpdateLengthsAndStartFec() {
@@ -189,7 +190,7 @@ InFecGroup QuicPacketCreator::MaybeUpdateLengthsAndStartFec() {
 }
 
 void QuicPacketCreator::MaybeStartFecProtection() {
-	if (max_packets_per_fec_group_ == 0 || fec_protect_) {
+	if (/*max_packets_per_fec_group_ == 0 || */fec_protect_) {
 		// Do not start FEC protection when FEC protection is not enabled or FEC
 		// protection is already on.
 		return;

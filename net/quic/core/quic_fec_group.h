@@ -19,6 +19,9 @@
 
 namespace net {
 
+	QuicPacketCount k_from_conf(FecConfiguration conf);
+
+
 using base::StringPiece;
 class NET_EXPORT_PRIVATE ParityPacket
 {

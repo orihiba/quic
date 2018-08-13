@@ -20,15 +20,55 @@ using std::set;
 
 namespace net {
 
+QuicPacketCount k_from_conf(FecConfiguration conf)
+{
+	switch (conf) {
+	case FEC_100_5:
+		return 100;
+	case FEC_50_5:
+		return 50;
+	case FEC_20_5:
+		return 20;
+	case FEC_15_5:
+		return 15;
+	case FEC_10_5:
+		return 10;
+	default:
+		DLOG(ERROR) << "unknown fec configuration in fec group: " << conf;
+		return 0;
+	}
+}
+
+QuicPacketCount m_from_conf(FecConfiguration conf)
+{
+	switch (conf) {
+	case FEC_100_5:
+	case FEC_50_5:
+	case FEC_20_5:
+	case FEC_15_5:
+	case FEC_10_5:
+		return 5;
+	default:
+		DLOG(ERROR) << "unknown fec configuration in fec group: " << conf;
+		return 0;
+	}
+}
+
 QuicFecGroup::QuicFecGroup(QuicPacketNumber fec_group_number, FecConfiguration fec_configuration)
     : fec_configuration(fec_configuration),
 	  min_protected_packet_(fec_group_number),
-      max_protected_packet_(fec_group_number + kDefaultMaxPacketsPerFecGroup - 1),
+    //  max_protected_packet_(fec_group_number + kDefaultMaxPacketsPerFecGroup - 1),
       payload_parity_len_(0),
-	block_count_(kDefaultMaxPacketsPerFecGroup),
-	recovery_block_count_(kDefaultRecoveryBlocksCount),
+	//block_count_(kDefaultMaxPacketsPerFecGroup),
+	//recovery_block_count_(kDefaultRecoveryBlocksCount),
 	
-      effective_encryption_level_(NUM_ENCRYPTION_LEVELS) {}
+      effective_encryption_level_(NUM_ENCRYPTION_LEVELS) {
+	QuicPacketCount k = k_from_conf(fec_configuration);
+	max_protected_packet_ = fec_group_number - 1 + k;
+	block_count_ = k;
+	recovery_block_count_ = m_from_conf(fec_configuration);
+	DVLOG(1) << "Created fec group with k=" << k << "and m=" << recovery_block_count_;
+}
 
 QuicFecGroup::~QuicFecGroup() {}
 
@@ -124,8 +164,8 @@ bool QuicFecGroup::UpdateFec(EncryptionLevel encryption_level,
 }
 
 bool QuicFecGroup::CanRevive() const {
-	// we can revive if we have at least kDefaultMaxPacketsPerFecGroup packets, include the fec packets.
-		return received_packets_.size() >= kDefaultMaxPacketsPerFecGroup;
+	// we can revive if we have at least k packets, include the fec packets.
+		return received_packets_.size() >= block_count_;
 }
 
 // used to compare parityPackets by their size. used with max_element function
@@ -267,8 +307,7 @@ const std::list<ParityPacket *> QuicFecGroup::getRedundancyPackets() {
 		block_bytes += 8 - max_payload_length % 8;  // a multiple of 8
 	}
 
-	block_count_ = parity_sent_packets_.size(); // k = kDefaultMaxPacketsPerFecGroup
-	assert(kDefaultMaxPacketsPerFecGroup == block_count_); 
+	assert(parity_sent_packets_.size() == block_count_);
 
 	u8 *data = new u8[block_bytes * block_count_];
 	memset(data, 0, block_bytes * block_count_);
