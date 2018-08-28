@@ -46,4 +46,43 @@ QuicPacketCount QuicSimpleDispatcher::getPacketsReceivedNumber()
 }
 
 
+// ---------------------------------------------------------------------
+
+QuicNormalDispatcher::QuicNormalDispatcher(
+	const QuicConfig& config,
+	const QuicCryptoServerConfig* crypto_config,
+	QuicVersionManager* version_manager,
+	std::unique_ptr<QuicConnectionHelperInterface> helper,
+	std::unique_ptr<QuicCryptoServerStream::Helper> session_helper,
+	std::unique_ptr<QuicAlarmFactory> alarm_factory)
+	: QuicDispatcher2(config,
+		crypto_config,
+		version_manager,
+		std::move(helper),
+		std::move(session_helper),
+		std::move(alarm_factory)) {}
+
+QuicNormalDispatcher::~QuicNormalDispatcher() {}
+
+QuicNormalServerSessionBase* QuicNormalDispatcher::CreateQuicSession(
+	QuicConnectionId connection_id,
+	const IPEndPoint& client_address) {
+	// The QuicServerSessionBase takes ownership of |connection| below.
+	QuicConnection* connection = new QuicConnection(
+		connection_id, client_address, helper(), alarm_factory(),
+		CreatePerConnectionWriter(),
+		/* owns_writer= */ true, Perspective::IS_SERVER, GetSupportedVersions());
+
+	QuicNormalServerSessionBase* session =
+		new QuicNormalServerSession(config(), connection, this, session_helper(),
+			crypto_config(), compressed_certs_cache());
+	session->Initialize();
+	return session;
+}
+
+QuicPacketCount QuicNormalDispatcher::getPacketsReceivedNumber()
+{
+	return 0;
+}
+
 }  // namespace net

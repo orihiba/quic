@@ -33,6 +33,7 @@
 #include "net/quic/core/quic_protocol.h"
 #include "net/quic/core/quic_stream_sequencer.h"
 #include "net/quic/core/quic_types.h"
+#include "net/base/io_buffer.h"
 
 namespace net {
 
@@ -178,7 +179,6 @@ class NET_EXPORT_PRIVATE ReliableQuicStream {
   // Get peer IP of the lastest packet which connection is dealing/delt with.
   virtual const IPEndPoint& PeerAddressOfLatestPacket() const;
 
- protected:
   // Sends as much of 'data' to the connection as the connection will consume,
   // and then buffers any remaining data in queued_data_.
   // If fin is true: if it is immediately passed on to the session,
@@ -187,6 +187,7 @@ class NET_EXPORT_PRIVATE ReliableQuicStream {
                          bool fin,
                          QuicAckListenerInterface* ack_listener);
 
+   protected:
   // Sends as many bytes in the first |count| buffers of |iov| to the connection
   // as the connection will consume.
   // If |ack_listener| is provided, then it will be notified once all
@@ -317,6 +318,92 @@ class NET_EXPORT_PRIVATE ReliableQuicStream {
   size_t busy_counter_;
 
   DISALLOW_COPY_AND_ASSIGN(ReliableQuicStream);
+};
+
+class NET_EXPORT_PRIVATE QuicNormalStream : public ReliableQuicStream {
+public:
+	// Visitor receives callbacks from the stream.
+	class NET_EXPORT_PRIVATE Visitor {
+	public:
+		Visitor() {}
+
+		// Called when the stream is closed.
+		virtual void OnClose(QuicNormalStream* stream) = 0;
+
+	protected:
+		virtual ~Visitor() {}
+
+	private:
+		DISALLOW_COPY_AND_ASSIGN(Visitor);
+	};
+
+	QuicNormalStream(QuicStreamId id, QuicSession* quic_session);
+	~QuicNormalStream() override;
+
+	// Override the base class to send QUIC_STREAM_NO_ERROR to the peer
+	// when the stream has not received all the data.
+	void CloseWriteSide() override;
+	void StopReading() override;
+
+	// ReliableQuicStream implementation
+	void OnClose() override;
+
+	// Override to maybe close the write side after writing.
+	void OnCanWrite() override;
+
+	virtual void OnDataAvailable() override;
+
+	// Override the base class to not discard response when receiving
+	// QUIC_STREAM_NO_ERROR.
+	//void OnStreamReset(const QuicRstStreamFrame& frame) override;
+
+	// This block of functions wraps the sequencer's functions of the same
+	// name.  These methods return uncompressed data until that has
+	// been fully processed.  Then they simply delegate to the sequencer.
+	virtual size_t Readv(const struct iovec* iov, size_t iov_len);
+	virtual int GetReadableRegions(iovec* iov, size_t iov_len) const;
+	void MarkConsumed(size_t num_bytes);
+
+	// Returns true when all data has been read from the peer, including the fin.
+	bool IsDoneReading() const;
+	bool HasBytesToRead() const;
+
+	void set_visitor(Visitor* visitor) { visitor_ = visitor; }
+
+	// Called when owning session is getting deleted to avoid subsequent
+	// use of the spdy_session_ member.
+	void ClearSession();
+
+	// Returns true if the sequencer has delivered the FIN, and no more body bytes
+	// will be available.
+	bool IsClosed() { return sequencer()->IsClosed(); }
+
+	int QuicNormalStream::Read(IOBuffer* buf, int buf_len);
+protected:
+	
+	QuicSession* session() const { return session_; }
+	Visitor* visitor() { return visitor_; }
+
+	// Redirects to the headers stream if force HOL blocking enabled,
+	// otherwise just pass through.
+	QuicConsumedData WritevDataInner(
+		QuicIOVector iov,
+		QuicStreamOffset offset,
+		bool fin,
+		QuicAckListenerInterface* ack_notifier_delegate) override;
+
+private:
+	QuicSession* session_;
+
+	Visitor* visitor_;
+
+	std::string data_;
+
+	// Tracks if the session this stream is running under was created by a
+	// server or a client.
+	Perspective perspective_;
+
+	DISALLOW_COPY_AND_ASSIGN(QuicNormalStream);
 };
 
 }  // namespace net

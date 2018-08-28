@@ -485,4 +485,144 @@ void ReliableQuicStream::UpdateSendWindowOffset(QuicStreamOffset new_window) {
   }
 }
 
+
+// --------------------------------------------------------------------------------------------------
+
+QuicNormalStream::QuicNormalStream(QuicStreamId id, QuicSession * quic_session)
+	: ReliableQuicStream(id, quic_session),
+	visitor_(nullptr),
+	session_(quic_session) {}
+
+QuicNormalStream::~QuicNormalStream() {};
+
+void QuicNormalStream::CloseWriteSide() {
+	if (!fin_received() && !rst_received() && sequencer()->ignore_read_data() &&
+		!rst_sent()) {
+		DCHECK(fin_sent());
+		// Tell the peer to stop sending further data.
+		DVLOG(1) << ENDPOINT << "Send QUIC_STREAM_NO_ERROR on stream " << id();
+		Reset(QUIC_STREAM_NO_ERROR);
+	}
+
+	ReliableQuicStream::CloseWriteSide();
+}
+
+void QuicNormalStream::StopReading() {
+	if (!fin_received() && !rst_received() && write_side_closed() &&
+		!rst_sent()) {
+		DCHECK(fin_sent());
+		// Tell the peer to stop sending further data.
+		DVLOG(1) << ENDPOINT << "Send QUIC_STREAM_NO_ERROR on stream " << id();
+		Reset(QUIC_STREAM_NO_ERROR);
+	}
+	ReliableQuicStream::StopReading();
+}
+
+size_t QuicNormalStream::Readv(const struct iovec* iov, size_t iov_len) {
+	return sequencer()->Readv(iov, iov_len);
+}
+
+int QuicNormalStream::GetReadableRegions(iovec* iov, size_t iov_len) const {
+	return sequencer()->GetReadableRegions(iov, iov_len);
+}
+
+void QuicNormalStream::MarkConsumed(size_t num_bytes) {
+	return sequencer()->MarkConsumed(num_bytes);
+}
+
+bool QuicNormalStream::IsDoneReading() const {
+	return sequencer()->IsClosed();
+}
+
+bool QuicNormalStream::HasBytesToRead() const {
+	return sequencer()->HasBytesToRead();
+}
+//void QuicNormalStream::OnStreamReset(const QuicRstStreamFrame& frame) {
+//	if (frame.error_code != QUIC_STREAM_NO_ERROR) {
+//		ReliableQuicStream::OnStreamReset(frame);
+//		return;
+//	}
+//	DVLOG(1) << "Received QUIC_STREAM_NO_ERROR, not discarding response";
+//	set_rst_received(true);
+//	MaybeIncreaseHighestReceivedOffset(frame.byte_offset);
+//	set_stream_error(frame.error_code);
+//	CloseWriteSide();
+//}
+
+void QuicNormalStream::OnClose() {
+	ReliableQuicStream::OnClose();
+
+	if (visitor_) {
+		Visitor* visitor = visitor_;
+		// Calling Visitor::OnClose() may result the destruction of the visitor,
+		// so we need to ensure we don't call it again.
+		visitor_ = nullptr;
+		visitor->OnClose(this);
+	}
+}
+
+void QuicNormalStream::OnCanWrite() {
+	ReliableQuicStream::OnCanWrite();
+
+	// Trailers (and hence a FIN) may have been sent ahead of queued body bytes.
+	if (!HasBufferedData() && fin_sent()) {
+		CloseWriteSide();
+	}
+}
+
+void QuicNormalStream::ClearSession() {
+	session_ = nullptr;
+}
+
+QuicConsumedData QuicNormalStream::WritevDataInner(
+	QuicIOVector iov,
+	QuicStreamOffset offset,
+	bool fin,
+	QuicAckListenerInterface* ack_notifier_delegate) {
+
+	return ReliableQuicStream::WritevDataInner(iov, offset, fin,
+		ack_notifier_delegate);
+}
+
+void QuicNormalStream::OnDataAvailable() {
+	// For push streams, visitor will not be set until the rendezvous
+	// between server promise and client request is complete.
+	/*if (visitor() == nullptr) // HIBA removed
+		return;*/
+
+ 	while (HasBytesToRead()) {
+		struct iovec iov;
+		if (GetReadableRegions(&iov, 1) == 0) {
+			// No more data to read.
+			break;
+		}
+		DVLOG(1) << ENDPOINT << " processed " << iov.iov_len << " bytes for stream "
+			<< id();
+		data_.append(static_cast<char*>(iov.iov_base), iov.iov_len);
+
+		MarkConsumed(iov.iov_len);
+	}
+	if (sequencer()->IsClosed()) {
+		OnFinRead();
+	}
+	else {
+		sequencer()->SetUnblocked();
+	}
+}
+
+int QuicNormalStream::Read(IOBuffer* buf, int buf_len) {
+	if (IsDoneReading())
+		return 0;  // EOF
+
+	if (!HasBytesToRead())
+		return -1;
+
+	iovec iov;
+	iov.iov_base = buf->data();
+	iov.iov_len = buf_len;
+	size_t bytes_read = Readv(&iov, 1);
+	
+	return bytes_read;
+}
+
 }  // namespace net

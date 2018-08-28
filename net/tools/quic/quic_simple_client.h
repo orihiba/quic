@@ -107,6 +107,78 @@ class QuicSimpleClient : public QuicClientBase,
   DISALLOW_COPY_AND_ASSIGN(QuicSimpleClient);
 };
 
+// ----------------------------------------------------------------------------------------------------
+
+class QuicNormalClient : public QuicNormalClientBase,
+	public QuicChromiumPacketReader::Visitor {
+public:
+	// Create a quic client, which will have events managed by an externally owned
+	// EpollServer.
+	QuicNormalClient(IPEndPoint server_address,
+		const QuicServerId& server_id,
+		const QuicVersionVector& supported_versions,
+		std::unique_ptr<ProofVerifier> proof_verifier);
+	QuicNormalClient(IPEndPoint server_address,
+		const QuicServerId& server_id,
+		const QuicVersionVector& supported_versions,
+		const QuicConfig& config,
+		std::unique_ptr<ProofVerifier> proof_verifier);
+
+	~QuicNormalClient() override;
+
+	// QuicChromiumPacketReader::Visitor
+	void OnReadError(int result, const DatagramClientSocket* socket) override;
+	bool OnPacket(const QuicReceivedPacket& packet,
+		IPEndPoint local_address,
+		IPEndPoint peer_address) override;
+
+	// From QuicClientBase
+	IPEndPoint GetLatestClientAddress() const override;
+
+protected:
+	// From QuicClientBase
+	QuicPacketWriter* CreateQuicPacketWriter() override;
+	void RunEventLoop() override;
+	bool CreateUDPSocketAndBind(IPEndPoint server_address,
+		IPAddress bind_to_address,
+		int bind_to_port) override;
+	void CleanUpAllUDPSockets() override;
+
+private:
+	friend class net::test::QuicClientPeer;
+
+	QuicChromiumAlarmFactory* CreateQuicAlarmFactory();
+	QuicChromiumConnectionHelper* CreateQuicConnectionHelper();
+
+	// Read a UDP packet and hand it to the framer.
+	bool ReadAndProcessPacket();
+
+	void StartPacketReaderIfNotStarted();
+
+	//  Used by |helper_| to time alarms.
+	QuicClock clock_;
+
+	// Address of the client if the client is connected to the server.
+	IPEndPoint client_address_;
+
+	// UDP socket connected to the server.
+	std::unique_ptr<UDPClientSocket> socket_;
+
+	// Tracks if the client is initialized to connect.
+	bool initialized_;
+
+	// The log used for the sockets.
+	NetLog net_log_;
+
+	std::unique_ptr<QuicChromiumPacketReader> packet_reader_;
+
+	bool packet_reader_started_;
+
+	base::WeakPtrFactory<QuicNormalClient> weak_factory_;
+
+	DISALLOW_COPY_AND_ASSIGN(QuicNormalClient);
+};
+
 }  // namespace net
 
 #endif  // NET_TOOLS_QUIC_QUIC_SIMPLE_CLIENT_H_

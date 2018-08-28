@@ -153,6 +153,50 @@ class QuicSimpleServerSession : public QuicServerSessionBase {
   DISALLOW_COPY_AND_ASSIGN(QuicSimpleServerSession);
 };
 
+
+// --------------------------------------------------------------------------------------------------------------------
+
+class QuicNormalServerSession : public QuicNormalServerSessionBase {
+public:
+
+	// Takes ownership of |connection|.
+	QuicNormalServerSession(const QuicConfig& config,
+		QuicConnection* connection,
+		Visitor* visitor,
+		QuicCryptoServerStream::Helper* helper,
+		const QuicCryptoServerConfig* crypto_config,
+		QuicCompressedCertsCache* compressed_certs_cache);
+
+	~QuicNormalServerSession() override;
+
+	// When a stream is marked draining, it will decrease the number of open
+	// streams. If it is an outgoing stream, try to open a new stream to send
+	// remaing push responses.
+	void StreamDraining(QuicStreamId id) override;
+
+	// Override base class to detact client sending data on server push stream.
+	void OnStreamFrame(const QuicStreamFrame& frame) override;
+
+protected:
+	// QuicSession methods:
+	QuicNormalStream* CreateIncomingDynamicStream(QuicStreamId id) override;
+	QuicNormalStream* CreateOutgoingDynamicStream(SpdyPriority priority) override;
+	// Closing an outgoing stream can reduce open outgoing stream count, try
+	// to handle queued promised streams right now.
+	void CloseStreamInner(QuicStreamId stream_id, bool locally_reset) override;
+	// Override to return true for locally preserved server push stream.
+	void HandleFrameOnNonexistentOutgoingStream(QuicStreamId stream_id) override;
+	// Override to handle reseting locally preserved streams.
+	void HandleRstOnValidNonexistentStream(
+		const QuicRstStreamFrame& frame) override;
+
+	// QuicServerSessionBaseMethod:
+	QuicCryptoServerStreamBase* CreateQuicCryptoServerStream(
+		const QuicCryptoServerConfig* crypto_config,
+		QuicCompressedCertsCache* compressed_certs_cache) override;
+
+	DISALLOW_COPY_AND_ASSIGN(QuicNormalServerSession);
+};
 }  // namespace net
 
 #endif  // NET_TOOLS_QUIC_QUIC_SIMPLE_SERVER_SESSION_H_

@@ -46,4 +46,39 @@ QuicAsyncStatus QuicClientPushPromiseIndex::Try(
   return QUIC_FAILURE;
 }
 
+
+// ----------------------------------------------------
+
+QuicClientPushPromiseIndex2::QuicClientPushPromiseIndex2() {}
+
+QuicClientPushPromiseIndex2::~QuicClientPushPromiseIndex2() {}
+
+QuicClientPushPromiseIndex2::TryHandle::~TryHandle() {}
+
+QuicClientPromisedInfo2* QuicClientPushPromiseIndex2::GetPromised(
+	const string& url) {
+	QuicPromisedByUrlMap2::iterator it = promised_by_url_.find(url);
+	if (it == promised_by_url_.end()) {
+		return nullptr;
+	}
+	return it->second;
+}
+
+QuicAsyncStatus QuicClientPushPromiseIndex2::Try(
+	const SpdyHeaderBlock& request,
+	QuicClientPushPromiseIndex2::Delegate* delegate,
+	TryHandle** handle) {
+	string url(SpdyUtils::GetUrlFromHeaderBlock(request));
+	QuicPromisedByUrlMap2::iterator it = promised_by_url_.find(url);
+	if (it != promised_by_url_.end()) {
+		QuicClientPromisedInfo2* promised = it->second;
+		QuicAsyncStatus rv = promised->HandleClientRequest(request, delegate);
+		if (rv == QUIC_PENDING) {
+			*handle = promised;
+		}
+		return rv;
+	}
+	return QUIC_FAILURE;
+}
+
 }  // namespace net

@@ -40,7 +40,15 @@ std::unique_ptr<net::ProofSource> CreateProofSource(
   return std::move(proof_source);
 }
 
+extern "C" EXPORT
+bool listenSocket(char * local_ip, uint16_t port);
+extern "C" EXPORT
+bool listenSocket2(char * local_ip, uint16_t port);
+
 int main(int argc, char* argv[]) {
+	/*listenSocket2("0.0.0.0", 6121);
+	exit(1);*/
+
   base::AtExitManager exit_manager;
   base::MessageLoopForIO message_loop;
 
@@ -166,5 +174,47 @@ bool initFec(uint16_t k, uint16_t m)
 	auto x = net::kDefaultMaxPacketsPerFecGroup;
 	x = 1;
 
+	return true;
+}
+
+extern "C" EXPORT
+bool listenSocket2(char * local_ip, uint16_t port)
+{
+	std::cout << "In listenSocket" << std::endl;
+	base::MessageLoopForIO message_loop;
+	char name[10] = { 'a','b','\0' };
+	char* argv[1] = { name };
+	base::CommandLine::Init(1, argv);
+	logging::LoggingSettings settings;
+	settings.logging_dest = logging::LOG_TO_SYSTEM_DEBUG_LOG;
+
+	net::IPAddress ip_addr;
+
+	if (!ip_addr.AssignFromIPLiteral(std::string(local_ip))) {
+		return false;
+	}
+
+	net::QuicConfig config;
+#if defined(OS_POSIX)
+	auto certPath = base::BasicStringPiece<std::string>("certs/leaf_cert.pem");
+	auto keyPath = base::BasicStringPiece<std::string>("certs/leaf_cert.pkcs8");
+#elif defined(OS_WIN)
+	auto certPath = base::BasicStringPiece<std::wstring>(L"certs\\leaf_cert.pem");
+	auto keyPath = base::BasicStringPiece<std::wstring>(L"certs\\leaf_cert.pkcs8");
+#endif
+
+	net::QuicNormalServer server(
+		CreateProofSource(base::FilePath(certPath),
+			base::FilePath(keyPath)),
+		config, net::QuicCryptoServerConfig::ConfigOptions(),
+		net::AllSupportedVersions());
+	server.SetStrikeRegisterNoStartupPeriod();
+
+	int rc = server.Listen(net::IPEndPoint(ip_addr, port));
+	if (rc < 0) {
+		return false;
+	}
+
+	base::RunLoop().Run();
 	return true;
 }

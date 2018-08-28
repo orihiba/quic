@@ -108,6 +108,87 @@ class NET_EXPORT_PRIVATE QuicClientPromisedInfo
   DISALLOW_COPY_AND_ASSIGN(QuicClientPromisedInfo);
 };
 
+
+// ---------------------------------------------------------------------------------
+
+class NET_EXPORT_PRIVATE QuicClientPromisedInfo2
+	: public QuicClientPushPromiseIndex2::TryHandle {
+public:
+	// Interface to QuicSpdyClientStream
+	QuicClientPromisedInfo2(QuicNormalClientSessionBase* session,
+		QuicStreamId id,
+		std::string url);
+	virtual ~QuicClientPromisedInfo2();
+
+	void Init();
+
+	// Validate promise headers etc.
+	void OnPromiseHeaders(const SpdyHeaderBlock& request_headers);
+
+	// Store response, possibly proceed with final validation.
+	void OnResponseHeaders(const SpdyHeaderBlock& response_headers);
+
+	// Rendezvous between this promised stream and a client request that
+	// has a matching URL.
+	virtual QuicAsyncStatus HandleClientRequest(
+		const SpdyHeaderBlock& headers,
+		QuicClientPushPromiseIndex2::Delegate* delegate);
+
+	void Cancel() override;
+
+	void Reset(QuicRstStreamErrorCode error_code);
+
+	// Client requests are initially associated to promises by matching
+	// URL in the client request against the URL in the promise headers,
+	// uing the |promised_by_url| map.  The push can be cross-origin, so
+	// the client should validate that the session is authoritative for
+	// the promised URL.  If not, it should call |RejectUnauthorized|.
+	QuicNormalClientSessionBase* session() { return session_; }
+
+	// If the promised response contains Vary header, then the fields
+	// specified by Vary must match between the client request header
+	// and the promise headers (see https://crbug.com//554220).  Vary
+	// validation requires the response headers (for the actual Vary
+	// field list), the promise headers (taking the role of the "cached"
+	// request), and the client request headers.
+	SpdyHeaderBlock* request_headers() { return request_headers_.get(); }
+
+	SpdyHeaderBlock* response_headers() { return response_headers_.get(); }
+
+	QuicStreamId id() const { return id_; }
+
+	const std::string url() const { return url_; }
+
+private:
+	friend class test::QuicClientPromisedInfoPeer;
+
+	class CleanupAlarm : public QuicAlarm::Delegate {
+	public:
+		explicit CleanupAlarm(QuicClientPromisedInfo2* promised)
+			: promised_(promised) {}
+
+		void OnAlarm() override;
+
+		QuicClientPromisedInfo2* promised_;
+	};
+
+	QuicAsyncStatus FinalValidation();
+
+	QuicNormalClientSessionBase* session_;
+	QuicStreamId id_;
+	std::string url_;
+	std::unique_ptr<SpdyHeaderBlock> request_headers_;
+	std::unique_ptr<SpdyHeaderBlock> response_headers_;
+	std::unique_ptr<SpdyHeaderBlock> client_request_headers_;
+	QuicClientPushPromiseIndex2::Delegate* client_request_delegate_;
+
+	// The promise will commit suicide eventually if it is not claimed
+	// by a GET first.
+	std::unique_ptr<QuicAlarm> cleanup_alarm_;
+
+	DISALLOW_COPY_AND_ASSIGN(QuicClientPromisedInfo2);
+};
+
 }  // namespace net
 
 #endif  // NET_QUIC_QUIC_CLIENT_PROMISED_INFO_H_

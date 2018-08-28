@@ -125,4 +125,120 @@ void QuicClientPromisedInfo::Cancel() {
   Reset(QUIC_STREAM_CANCELLED);
 }
 
+// ------------------------------------------------------------------------------------
+
+QuicClientPromisedInfo2::QuicClientPromisedInfo2(QuicNormalClientSessionBase* session,
+	QuicStreamId id,
+	string url)
+	: session_(session),
+	id_(id),
+	url_(std::move(url)),
+	client_request_delegate_(nullptr) {}
+
+QuicClientPromisedInfo2::~QuicClientPromisedInfo2() {}
+
+void QuicClientPromisedInfo2::CleanupAlarm::OnAlarm() {
+	DVLOG(1) << "self GC alarm for stream " << promised_->id_;
+	promised_->session()->OnPushStreamTimedOut(promised_->id_);
+	if (FLAGS_quic_send_push_stream_timed_out_error) {
+		promised_->Reset(QUIC_PUSH_STREAM_TIMED_OUT);
+	}
+	else {
+		promised_->Reset(QUIC_STREAM_CANCELLED);
+	}
+}
+
+void QuicClientPromisedInfo2::Init() {
+	cleanup_alarm_.reset(session_->connection()->alarm_factory()->CreateAlarm(
+		new QuicClientPromisedInfo2::CleanupAlarm(this)));
+	cleanup_alarm_->Set(
+		session_->connection()->helper()->GetClock()->ApproximateNow() +
+		QuicTime::Delta::FromSeconds(kPushPromiseTimeoutSecs));
+}
+
+void QuicClientPromisedInfo2::OnPromiseHeaders(const SpdyHeaderBlock& headers) {
+	// RFC7540, Section 8.2, requests MUST be safe [RFC7231], Section
+	// 4.2.1.  GET and HEAD are the methods that are safe and required.
+	SpdyHeaderBlock::const_iterator it = headers.find(":method");
+	DCHECK(it != headers.end());
+	if (!(it->second == "GET" || it->second == "HEAD")) {
+		DVLOG(1) << "Promise for stream " << id_ << " has invalid method "
+			<< it->second;
+		Reset(QUIC_INVALID_PROMISE_METHOD);
+		return;
+	}
+	if (!SpdyUtils::UrlIsValid(headers)) {
+		DVLOG(1) << "Promise for stream " << id_ << " has invalid URL " << url_;
+		Reset(QUIC_INVALID_PROMISE_URL);
+		return;
+	}
+	if (!session_->IsAuthorized(SpdyUtils::GetHostNameFromHeaderBlock(headers))) {
+		Reset(QUIC_UNAUTHORIZED_PROMISE_URL);
+		return;
+	}
+	request_headers_.reset(new SpdyHeaderBlock(headers.Clone()));
+}
+
+void QuicClientPromisedInfo2::OnResponseHeaders(const SpdyHeaderBlock& headers) {
+	response_headers_.reset(new SpdyHeaderBlock(headers.Clone()));
+	if (client_request_delegate_) {
+		// We already have a client request waiting.
+		FinalValidation();
+	}
+}
+
+void QuicClientPromisedInfo2::Reset(QuicRstStreamErrorCode error_code) {
+	QuicClientPushPromiseIndex2::Delegate* delegate = client_request_delegate_;
+	//session_->ResetPromised(id_, error_code);
+	//session_->DeletePromised(this);
+	if (delegate) {
+		delegate->OnRendezvousResult(nullptr);
+	}
+}
+
+QuicAsyncStatus QuicClientPromisedInfo2::FinalValidation() {
+	if (!client_request_delegate_->CheckVary(
+		*client_request_headers_, *request_headers_, *response_headers_)) {
+		Reset(QUIC_PROMISE_VARY_MISMATCH);
+		return QUIC_FAILURE;
+	}
+	QuicNormalStream* stream = session_->GetPromisedStream(id_);
+	if (!stream) {
+		// This shouldn't be possible, as |ClientRequest| guards against
+		// closed stream for the synchronous case.  And in the
+		// asynchronous case, a RST can only be caught by |OnAlarm()|.
+		QUIC_BUG << "missing promised stream" << id_;
+	}
+	QuicClientPushPromiseIndex2::Delegate* delegate = client_request_delegate_;
+	session_->DeletePromised(this);
+	// Stream can start draining now
+	if (delegate) {
+		delegate->OnRendezvousResult(stream);
+	}
+	return QUIC_SUCCESS;
+}
+
+QuicAsyncStatus QuicClientPromisedInfo2::HandleClientRequest(
+	const SpdyHeaderBlock& request_headers,
+	QuicClientPushPromiseIndex2::Delegate* delegate) {
+	if (session_->IsClosedStream(id_)) {
+		// There was a RST on the response stream.
+		session_->DeletePromised(this);
+		return QUIC_FAILURE;
+	}
+	client_request_delegate_ = delegate;
+	client_request_headers_.reset(new SpdyHeaderBlock(request_headers.Clone()));
+	if (!response_headers_) {
+		return QUIC_PENDING;
+	}
+	return FinalValidation();
+}
+
+void QuicClientPromisedInfo2::Cancel() {
+	// Don't fire OnRendezvousResult() for client initiated cancel.
+	client_request_delegate_ = nullptr;
+	Reset(QUIC_STREAM_CANCELLED);
+}
+
+
 }  // namespace net

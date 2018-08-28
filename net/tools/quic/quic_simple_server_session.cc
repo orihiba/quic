@@ -206,4 +206,97 @@ void QuicSimpleServerSession::HandlePromisedPushRequests() {
   }
 }
 
+// -----------------------------------------------------------------------------------------------------------------
+
+QuicNormalServerSession::QuicNormalServerSession(
+	const QuicConfig& config,
+	QuicConnection* connection,
+	Visitor* visitor,
+	QuicCryptoServerStream::Helper* helper,
+	const QuicCryptoServerConfig* crypto_config,
+	QuicCompressedCertsCache* compressed_certs_cache)
+	: QuicNormalServerSessionBase(config,
+		connection,
+		visitor,
+		helper,
+		crypto_config,
+		compressed_certs_cache) {}
+
+QuicNormalServerSession::~QuicNormalServerSession() {
+	delete connection();
+}
+
+QuicCryptoServerStreamBase*
+QuicNormalServerSession::CreateQuicCryptoServerStream(
+	const QuicCryptoServerConfig* crypto_config,
+	QuicCompressedCertsCache* compressed_certs_cache) {
+	return new QuicCryptoServerStream(crypto_config, compressed_certs_cache,
+		FLAGS_enable_quic_stateless_reject_support,
+		this, stream_helper());
+}
+
+void QuicNormalServerSession::StreamDraining(QuicStreamId id) {
+	QuicSession::StreamDraining(id);
+}
+
+void QuicNormalServerSession::OnStreamFrame(const QuicStreamFrame& frame) {
+	//if (!IsIncomingStream(frame.stream_id)) {
+	//	LOG(WARNING) << "Client shouldn't send data on server push stream";
+	//	connection()->CloseConnection(
+	//		QUIC_INVALID_STREAM_ID, "Client sent data on server push stream",
+	//		ConnectionCloseBehavior::SEND_CONNECTION_CLOSE_PACKET);
+	//	return;
+	//}
+	QuicSession::OnStreamFrame(frame);
+}
+QuicNormalStream* QuicNormalServerSession::CreateIncomingDynamicStream(
+    QuicStreamId id) {
+  if (!ShouldCreateIncomingDynamicStream(id)) {
+    return nullptr;
+  }
+
+  QuicNormalStream* stream = new QuicNormalStream(id, this);
+  
+  ActivateStream(stream);
+  return stream;
+}
+
+QuicNormalStream* QuicNormalServerSession::CreateOutgoingDynamicStream(SpdyPriority priority) {
+  if (!ShouldCreateOutgoingDynamicStream()) {
+    return nullptr;
+  }
+
+  QuicNormalStream* stream =
+      new QuicNormalStream(GetNextOutgoingStreamId(), this);
+  ActivateStream(stream);
+  return stream;
+}
+
+void QuicNormalServerSession::CloseStreamInner(QuicStreamId stream_id,
+                                               bool locally_reset) {
+  QuicSession::CloseStreamInner(stream_id, locally_reset);
+}
+
+void QuicNormalServerSession::HandleFrameOnNonexistentOutgoingStream(
+    QuicStreamId stream_id) {
+}
+
+void QuicNormalServerSession::HandleRstOnValidNonexistentStream(
+    const QuicRstStreamFrame& frame) {
+  QuicSession::HandleRstOnValidNonexistentStream(frame);
+  if (!IsClosedStream(frame.stream_id)) {
+    // If a nonexistent stream is not a closed stream and still valid, it must
+    // be a locally preserved stream. Resetting this kind of stream means
+    // cancelling the promised server push.
+    // Since PromisedStreamInfo are queued in sequence, the corresponding
+    // index for it in promised_streams_ can be calculated.
+    DCHECK(frame.stream_id >= next_outgoing_stream_id());
+    //size_t index = (frame.stream_id - next_outgoing_stream_id()) / 2;
+    //DCHECK(index <= promised_streams_.size());
+    //promised_streams_[index].is_cancelled = true;
+    connection()->SendRstStream(frame.stream_id, QUIC_RST_ACKNOWLEDGEMENT, 0);
+  }
+}
+
+
 }  // namespace net
