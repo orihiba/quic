@@ -13,6 +13,7 @@
 #include <vector>
 
 #include "base/macros.h"
+#include "base/synchronization/waitable_event.h"
 #include "net/base/ip_endpoint.h"
 #include "net/base/linked_hash_map.h"
 #include "net/quic/core/crypto/quic_compressed_certs_cache.h"
@@ -27,6 +28,7 @@
 #include "net/tools/quic/quic_process_packet_interface.h"
 #include "net/tools/quic/quic_time_wait_list_manager.h"
 #include "net/tools/quic/stateless_rejector.h"
+#include "net/tools/quic/quic_simple_server.h"
 
 namespace net {
 
@@ -375,7 +377,6 @@ class QuicDispatcher : public QuicServerSessionBase::Visitor,
 
 // -----------------------------------------
 
-
 class QuicDispatcher2 : public QuicNormalServerSessionBase::Visitor,
 	public ProcessPacketInterface,
 	public QuicBlockedWriterInterface,
@@ -393,7 +394,8 @@ public:
 		QuicVersionManager* version_manager,
 		std::unique_ptr<QuicConnectionHelperInterface> helper,
 		std::unique_ptr<QuicCryptoServerStream::Helper> session_helper,
-		std::unique_ptr<QuicAlarmFactory> alarm_factory);
+		std::unique_ptr<QuicAlarmFactory> alarm_factory,
+		QuicNormalServer *server);
 
 	~QuicDispatcher2() override;
 
@@ -612,6 +614,8 @@ protected:
 	virtual void OnBufferPacketFailure(
 		QuicBufferedPacketStore::EnqueuePacketResult result,
 		QuicConnectionId connection_id);
+	
+	//void QuicDispatcher2::OnStreamClose(QuicNormalStream *stream);
 
 private:
 	friend class net::test::QuicDispatcherPeer;
@@ -708,7 +712,7 @@ private:
 	// A backward counter of how many new sessions can be create within current
 	// event loop. When reaches 0, it means can't create sessions for now.
 	int16_t new_sessions_allowed_per_event_loop_;
-
+	QuicNormalServer *server_;
 	DISALLOW_COPY_AND_ASSIGN(QuicDispatcher2);
 };
 

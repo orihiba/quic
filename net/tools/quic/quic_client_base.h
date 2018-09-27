@@ -554,14 +554,17 @@ public:
 	void WriteOrBufferData(base::StringPiece data,
 		bool fin);
 
-	// Sends an HTTP request and waits for response before returning.
-	void SendRequestAndWaitForResponse(const SpdyHeaderBlock& headers,
-		base::StringPiece body,
-		bool fin);
+	//// Sends an HTTP request and waits for response before returning.
+	//void SendRequestAndWaitForResponse(const SpdyHeaderBlock& headers,
+	//	base::StringPiece body,
+	//	bool fin);
 
-	// Sends a request simple GET for each URL in |url_list|, and then waits for
-	// each to complete.
-	void SendRequestsAndWaitForResponse(const std::vector<std::string>& url_list);
+	//// Sends a request simple GET for each URL in |url_list|, and then waits for
+	//// each to complete.
+	//void SendRequestsAndWaitForResponse(const std::vector<std::string>& url_list);
+
+	//base::StringPiece Recv(size_t max_len);
+	int Recv(char *buf, size_t len);
 
 	// Returns a newly created QuicSpdyClientStream, owned by the
 	// QuicSimpleClient.
@@ -792,6 +795,8 @@ protected:
 	}
 
 private:
+	bool data_available_;
+
 	// Specific QuicClient class for storing data to resend.
 	class ClientQuicDataToResend : public QuicDataToResend {
 	public:

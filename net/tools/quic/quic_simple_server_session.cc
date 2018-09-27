@@ -220,7 +220,7 @@ QuicNormalServerSession::QuicNormalServerSession(
 		visitor,
 		helper,
 		crypto_config,
-		compressed_certs_cache) {}
+		compressed_certs_cache), streams_to_reset_() {}
 
 QuicNormalServerSession::~QuicNormalServerSession() {
 	delete connection();
@@ -236,7 +236,7 @@ QuicNormalServerSession::CreateQuicCryptoServerStream(
 }
 
 void QuicNormalServerSession::StreamDraining(QuicStreamId id) {
-	QuicSession::StreamDraining(id);
+	QuicNormalSession::StreamDraining(id);
 }
 
 void QuicNormalServerSession::OnStreamFrame(const QuicStreamFrame& frame) {
@@ -247,8 +247,23 @@ void QuicNormalServerSession::OnStreamFrame(const QuicStreamFrame& frame) {
 	//		ConnectionCloseBehavior::SEND_CONNECTION_CLOSE_PACKET);
 	//	return;
 	//}
-	QuicSession::OnStreamFrame(frame);
+	QuicNormalSession::OnStreamFrame(frame);
+
+	//if (frame.fin) {
+	//	QuicNormalStream *stream = (QuicNormalStream *)GetOrCreateDynamicStream(frame.stream_id);
+	//	//IOBuffer* buf = new IOBuffer(0x100000);
+	//	//char *a = buf->data();
+	//	//stream->Read(buf, 0x100000);
+	//	string data = stream->data();
+	//	//visitor()->OnDataAvailable(data);
+	//}
 }
+
+//void QuicNormalServerSession::OnDataAvailable()
+//{
+//	visitor()->OnDataAvailable();
+//}
+
 QuicNormalStream* QuicNormalServerSession::CreateIncomingDynamicStream(
     QuicStreamId id) {
   if (!ShouldCreateIncomingDynamicStream(id)) {
@@ -273,8 +288,34 @@ QuicNormalStream* QuicNormalServerSession::CreateOutgoingDynamicStream(SpdyPrior
 }
 
 void QuicNormalServerSession::CloseStreamInner(QuicStreamId stream_id,
-                                               bool locally_reset) {
-  QuicSession::CloseStreamInner(stream_id, locally_reset);
+	bool locally_reset) {
+
+	auto stream = GetOrCreateDynamicStream(stream_id);
+
+	if (!stream->fin_sent()) {
+		// should send RST. do it in other thread.
+
+		// check if already called, and called now from the correct thread
+		if (!stream->rst_sent()) {
+			stream->set_rst_sent(true); // mark as done
+			streams_to_reset_.push_back(stream);
+		} else {
+			QuicNormalSession::CloseStreamInner(stream_id, locally_reset);
+
+		}
+		
+		//visitor()->OnStreamClose((QuicNormalStream*)stream);
+	} else {
+		QuicNormalSession::CloseStreamInner(stream_id, locally_reset);
+	}
+}
+
+void QuicNormalServerSession::ResetStreams()
+{
+	for (const auto & st : streams_to_reset_) {
+		st->Reset(QUIC_RST_ACKNOWLEDGEMENT);
+	}
+	streams_to_reset_.clear();
 }
 
 void QuicNormalServerSession::HandleFrameOnNonexistentOutgoingStream(
@@ -283,7 +324,7 @@ void QuicNormalServerSession::HandleFrameOnNonexistentOutgoingStream(
 
 void QuicNormalServerSession::HandleRstOnValidNonexistentStream(
     const QuicRstStreamFrame& frame) {
-  QuicSession::HandleRstOnValidNonexistentStream(frame);
+	QuicNormalSession::HandleRstOnValidNonexistentStream(frame);
   if (!IsClosedStream(frame.stream_id)) {
     // If a nonexistent stream is not a closed stream and still valid, it must
     // be a locally preserved stream. Resetting this kind of stream means
@@ -297,6 +338,5 @@ void QuicNormalServerSession::HandleRstOnValidNonexistentStream(
     connection()->SendRstStream(frame.stream_id, QUIC_RST_ACKNOWLEDGEMENT, 0);
   }
 }
-
 
 }  // namespace net

@@ -573,6 +573,8 @@ QuicNormalClientBase::QuicNormalClientBase(const QuicServerId& server_id,
 QuicNormalClientBase::~QuicNormalClientBase() {}
 
 void QuicNormalClientBase::OnClose(QuicNormalStream* stream) {
+	int a = 0;
+	a = 1;
 	//DCHECK(stream != nullptr);
 	//QuicNormalStream* client_stream =
 	//	static_cast<QuicNormalStream*>(stream);
@@ -736,6 +738,20 @@ void QuicNormalClientBase::WriteOrBufferData(base::StringPiece data,
 	std::unique_ptr<QuicDataToResend> data_to_resend(
 		new ClientQuicDataToResend(nullptr, data, fin, this));
 	MaybeAddQuicDataToResend(std::move(data_to_resend));
+}
+
+int QuicNormalClientBase::Recv(char *buf, size_t len) {
+	/*while (!data_available_) {
+		WaitForEvents();
+	}*/
+	
+	while (session_->ReadData(buf, len) == 0) {
+		RunEventLoop();
+	}
+	
+	int a = 2;
+	a = 1;
+	return 0;
 }
 
 //void QuicNormalClientBase::SendRequestAndWaitForResponse(

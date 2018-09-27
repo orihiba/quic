@@ -647,7 +647,7 @@ bool QuicSession::ShouldYield(QuicStreamId stream_id) {
     return false;
   }
   return write_blocked_streams()->ShouldYield(stream_id);
-}
+ }
 
 ReliableQuicStream* QuicSession::GetOrCreateDynamicStream(
     const QuicStreamId stream_id) {
@@ -808,4 +808,57 @@ bool QuicSession::IsIncomingStream(QuicStreamId id) const {
   return id % 2 != next_outgoing_stream_id_ % 2;
 }
 
+void QuicSession::RegisterStream(QuicStreamId stream_id)
+{
+	write_blocked_streams_.RegisterStream(stream_id, 3); // kDefaultPriority
+}
+
+void QuicSession::UnregisterStream(QuicStreamId stream_id)
+{
+	write_blocked_streams_.UnregisterStream(stream_id);
+}
+
+// -----
+
+QuicNormalSession::QuicNormalSession(QuicConnection* connection, const QuicConfig& config)
+	: QuicSession(connection, config) {}
+
+void QuicNormalSession::OnDataAvailable()
+{
+	// will be overided by inheritor classes
+}
+
+void QuicNormalSession::OnStreamFrame(const QuicStreamFrame& frame) {
+	QuicSession::OnStreamFrame(frame);
+	if (frame.fin) {
+		OnDataAvailable();
+	}
+}
+
+int QuicNormalSession::ReadData(char *buffer, size_t len)
+{
+	/*for (auto const& kv : dynamic_streams()) {
+		((QuicNormalStream*)kv.second)->Read(buffer, len);
+		break;
+	}*/
+	if (readable_stream_map_.empty()) {
+		return 0;
+	}
+	ReadableStreamMap::iterator it = readable_stream_map_.begin();
+	QuicNormalStream *stream = (QuicNormalStream*)it->second;
+	if (stream->fin_received()) {
+		return stream->Read(buffer, len);
+	}
+	return 0;
+}
+
+void QuicNormalSession::AddRedableStream(QuicNormalStream *stream)
+{
+	readable_stream_map_[stream->id()] = stream;
+}
+
+void QuicNormalSession::RemoveRedableStream(QuicNormalStream *stream)
+{
+	readable_stream_map_.erase(stream->id());
+}
 }  // namespace net

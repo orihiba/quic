@@ -166,7 +166,7 @@ class NET_EXPORT_PRIVATE QuicServerSessionBase : public QuicSpdySession {
 
 // -----------------------------------------------------------------------------------------------------
 
-class NET_EXPORT_PRIVATE QuicNormalServerSessionBase : public QuicSession {
+class NET_EXPORT_PRIVATE QuicNormalServerSessionBase : public QuicNormalSession {
 public:
 	// An interface from the session to the entity owning the session.
 	// This lets the session notify its owner (the Dispatcher) when the connection
@@ -190,6 +190,8 @@ public:
 		// Called before a packet is going to be processed by |session|.
 		virtual void OnPacketBeingDispatchedToSession(
 			QuicNormalServerSessionBase* session) = 0;
+
+		//virtual void OnStreamClose(QuicNormalStream *stream) = 0;
 	};
 
 	// Does not take ownership of |connection|. |crypto_config| must outlive the
@@ -215,6 +217,8 @@ public:
 
 	void Initialize() override;
 
+	void SendData(base::StringPiece data);
+
 	const QuicCryptoServerStreamBase* crypto_stream() const {
 		return crypto_stream_.get();
 	}
@@ -236,6 +240,9 @@ protected:
 	// established yet or number of server initiated streams already reaches the
 	// upper limit.
 	bool ShouldCreateOutgoingDynamicStream();
+
+	virtual QuicNormalStream* CreateOutgoingDynamicStream(
+		SpdyPriority priority) = 0;
 
 	// If we should create an incoming stream, returns true. Otherwise
 	// does error handling, including communicating the error to the client and

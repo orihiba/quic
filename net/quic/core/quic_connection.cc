@@ -1505,20 +1505,20 @@ const QuicConnectionStats& QuicConnection::GetStats() {
 void QuicConnection::ProcessUdpPacket(const IPEndPoint& self_address,
                                       const IPEndPoint& peer_address,
                                       const QuicReceivedPacket& packet) {
-	static int number_of_packets = 1;
+	//static int number_of_packets = 1;
 	idle_timeout_alarm_->Update(clock_->ApproximateNow() + new_idle_network_timeout_, QuicTime::Delta::Zero());
 
   if (!connected_) {
     return;
   }
-  if (perspective_ == Perspective::IS_CLIENT) {
-	 if (/*(number_of_packets >= 3 && number_of_packets <= 5) ||*/ (number_of_packets >= 7 && number_of_packets <= 10)/* || (number_of_packets >= 65 && number_of_packets <= 66)*/ /*|| (number_of_packets >= 29 && number_of_packets <= 33) || (number_of_packets >= 36 && number_of_packets <= 40)*/)
-	 {
-		  number_of_packets++;
-		  return;
-	 }
-	 number_of_packets++;
-  }
+  //if (perspective_ == Perspective::IS_CLIENT) {
+	 //if (/*(number_of_packets >= 3 && number_of_packets <= 5) ||*/ (number_of_packets >= 7 && number_of_packets <= 10)/* || (number_of_packets >= 65 && number_of_packets <= 66)*/ /*|| (number_of_packets >= 29 && number_of_packets <= 33) || (number_of_packets >= 36 && number_of_packets <= 40)*/)
+	 //{
+		//  number_of_packets++;
+		//  return;
+	 //}
+	 //number_of_packets++;
+  //}
 
   if (debug_visitor_ != nullptr) {
     debug_visitor_->OnPacketReceived(self_address, peer_address, packet);

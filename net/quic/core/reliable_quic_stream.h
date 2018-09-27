@@ -77,7 +77,7 @@ class NET_EXPORT_PRIVATE ReliableQuicStream {
 
   // Called by the stream subclass after it has consumed the final incoming
   // data.
-  void OnFinRead();
+  virtual void OnFinRead();
 
   // Called when new data is available from the sequencer.  Subclasses must
   // actively retrieve the data using the sequencer's Readv() or
@@ -378,7 +378,11 @@ public:
 	// will be available.
 	bool IsClosed() { return sequencer()->IsClosed(); }
 
-	int QuicNormalStream::Read(IOBuffer* buf, int buf_len);
+	int QuicNormalStream::Read(char* buf, int buf_len);
+	int QuicNormalStream::ReadAll(char* buf, int buf_len);
+
+	const std::string& data() const { return data_; }
+
 protected:
 	
 	QuicSession* session() const { return session_; }
@@ -402,6 +406,9 @@ private:
 	// Tracks if the session this stream is running under was created by a
 	// server or a client.
 	Perspective perspective_;
+
+	virtual void OnStreamFrame(const QuicStreamFrame& frame) override;
+	virtual void OnFinRead() override;
 
 	DISALLOW_COPY_AND_ASSIGN(QuicNormalStream);
 };

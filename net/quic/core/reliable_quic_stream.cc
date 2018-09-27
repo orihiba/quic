@@ -491,9 +491,15 @@ void ReliableQuicStream::UpdateSendWindowOffset(QuicStreamOffset new_window) {
 QuicNormalStream::QuicNormalStream(QuicStreamId id, QuicSession * quic_session)
 	: ReliableQuicStream(id, quic_session),
 	visitor_(nullptr),
-	session_(quic_session) {}
+	session_(quic_session) {
+	session_->RegisterStream(id);
+}
 
-QuicNormalStream::~QuicNormalStream() {};
+QuicNormalStream::~QuicNormalStream() {
+	if (session_ != nullptr) {
+		session_->UnregisterStream(id());
+	}
+};
 
 void QuicNormalStream::CloseWriteSide() {
 	if (!fin_received() && !rst_received() && sequencer()->ignore_read_data() &&
@@ -537,6 +543,7 @@ bool QuicNormalStream::IsDoneReading() const {
 bool QuicNormalStream::HasBytesToRead() const {
 	return sequencer()->HasBytesToRead();
 }
+// use super imp
 //void QuicNormalStream::OnStreamReset(const QuicRstStreamFrame& frame) {
 //	if (frame.error_code != QUIC_STREAM_NO_ERROR) {
 //		ReliableQuicStream::OnStreamReset(frame);
@@ -550,7 +557,15 @@ bool QuicNormalStream::HasBytesToRead() const {
 //}
 
 void QuicNormalStream::OnClose() {
-	ReliableQuicStream::OnClose();
+	//if (!fin_sent() && !rst_sent()) {
+	//	// For flow control accounting, tell the peer how many bytes have been
+	//	// written on this stream before termination. Done here if needed, using a
+	//	// RST_STREAM frame.
+	//	DVLOG(1) << ENDPOINT << "Sending RST_STREAM in OnClose: " << id();
+	//	session_->SendRstStream(id(), QUIC_RST_ACKNOWLEDGEMENT,
+	//	stream_bytes_written());
+	//	set_rst_sent(true);
+	//}
 
 	if (visitor_) {
 		Visitor* visitor = visitor_;
@@ -559,6 +574,8 @@ void QuicNormalStream::OnClose() {
 		visitor_ = nullptr;
 		visitor->OnClose(this);
 	}
+
+	ReliableQuicStream::OnClose();
 }
 
 void QuicNormalStream::OnCanWrite() {
@@ -590,17 +607,58 @@ void QuicNormalStream::OnDataAvailable() {
 	/*if (visitor() == nullptr) // HIBA removed
 		return;*/
 
- 	while (HasBytesToRead()) {
+ //	while (HasBytesToRead()) {
+	//	struct iovec iov;
+	//	if (GetReadableRegions(&iov, 1) == 0) {
+	//		// No more data to read.
+	//		break;
+	//	}
+	//	DVLOG(1) << ENDPOINT << " processed " << iov.iov_len << " bytes for stream "
+	//		<< id();
+	//	data_.append(static_cast<char*>(iov.iov_base), iov.iov_len);
+
+	//	MarkConsumed(iov.iov_len);
+	//}
+	//if (sequencer()->IsClosed()) {
+	//	OnFinRead();
+	//}
+	//else {
+	//	sequencer()->SetUnblocked();
+	//}
+}
+
+int QuicNormalStream::Read(char* buf, int buf_len) {
+	//if (IsDoneReading())
+	//	return 0;  // EOF
+
+	//if (!HasBytesToRead())
+	//	return -1;
+
+	//iovec iov;
+	//iov.iov_base = buf;
+	//iov.iov_len = buf_len;
+	//size_t bytes_read = Readv(&iov, 1);
+	//
+	//return bytes_read;
+
+	std::string data;
+	while (HasBytesToRead() && buf_len) {
 		struct iovec iov;
 		if (GetReadableRegions(&iov, 1) == 0) {
 			// No more data to read.
 			break;
 		}
+
+		if (iov.iov_len > buf_len) {
+			iov.iov_len = buf_len;
+		}
+
 		DVLOG(1) << ENDPOINT << " processed " << iov.iov_len << " bytes for stream "
 			<< id();
-		data_.append(static_cast<char*>(iov.iov_base), iov.iov_len);
+		data.append(static_cast<char*>(iov.iov_base), iov.iov_len);
 
 		MarkConsumed(iov.iov_len);
+		buf_len -= iov.iov_len;
 	}
 	if (sequencer()->IsClosed()) {
 		OnFinRead();
@@ -608,21 +666,37 @@ void QuicNormalStream::OnDataAvailable() {
 	else {
 		sequencer()->SetUnblocked();
 	}
+
+	strncpy(buf, data.c_str(), data.size());
+	return data.size();
 }
 
-int QuicNormalStream::Read(IOBuffer* buf, int buf_len) {
-	if (IsDoneReading())
-		return 0;  // EOF
-
-	if (!HasBytesToRead())
-		return -1;
-
-	iovec iov;
-	iov.iov_base = buf->data();
-	iov.iov_len = buf_len;
-	size_t bytes_read = Readv(&iov, 1);
-	
+int QuicNormalStream::ReadAll(char* buf, int buf_len) {
+	size_t bytes_read = 0;
+	while (buf_len > 0) {
+		size_t bytes_read_cur = Read(buf + bytes_read, buf_len - bytes_read);
+		bytes_read += bytes_read_cur;
+	}
 	return bytes_read;
+}
+
+void QuicNormalStream::OnStreamFrame(const QuicStreamFrame& frame) {
+	ReliableQuicStream::OnStreamFrame(frame);
+
+	if (frame.fin) {
+		QuicNormalSession *cur_session = (QuicNormalSession*)session();
+		cur_session->AddRedableStream(this);
+	}
+}
+
+void QuicNormalStream::OnFinRead()
+{
+	ReliableQuicStream::OnFinRead();
+	
+	QuicNormalSession *cur_session = (QuicNormalSession*)session();
+	cur_session->RemoveRedableStream(this);
+
+	CloseWriteSide(); // this stream is used for read only. this will close the stream
 }
 
 }  // namespace net

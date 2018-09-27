@@ -229,6 +229,9 @@ class NET_EXPORT_PRIVATE QuicSession : public QuicConnectionVisitorInterface {
   // Returns true if this stream should yield writes to another blocked stream.
   bool ShouldYield(QuicStreamId stream_id);
 
+  void RegisterStream(QuicStreamId stream_id);
+  void UnregisterStream(QuicStreamId stream_id);
+
  protected:
   using StaticStreamMap =
       base::SmallMap<std::unordered_map<QuicStreamId, ReliableQuicStream*>, 2>;
@@ -419,6 +422,23 @@ class NET_EXPORT_PRIVATE QuicSession : public QuicConnectionVisitorInterface {
   DISALLOW_COPY_AND_ASSIGN(QuicSession);
 };
 
+
+// ------
+class NET_EXPORT_PRIVATE QuicNormalSession : public QuicSession
+{
+public:
+	QuicNormalSession(QuicConnection* connection, const QuicConfig& config);
+
+	virtual void OnDataAvailable();
+	void OnStreamFrame(const QuicStreamFrame& frame);
+	using ReadableStreamMap =
+		base::SmallMap<std::unordered_map<QuicStreamId, QuicNormalStream*>, 2>;
+	ReadableStreamMap readable_stream_map_;
+	int ReadData(char *buffer, size_t len);
+
+	void AddRedableStream(QuicNormalStream *stream);
+	void RemoveRedableStream(QuicNormalStream *stream);
+};
 }  // namespace net
 
 #endif  // NET_QUIC_QUIC_SESSION_H_

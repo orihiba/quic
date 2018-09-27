@@ -146,7 +146,7 @@ class NET_EXPORT_PRIVATE QuicClientSessionBase
 
 // Base class for all client-specific QuicSession subclasses.
 class NET_EXPORT_PRIVATE QuicNormalClientSessionBase
-	: public QuicSession,
+	: public QuicNormalSession,
 	public QuicCryptoClientStream::ProofHandler {
 public:
 	// Takes ownership of |connection|. Caller retains ownership of

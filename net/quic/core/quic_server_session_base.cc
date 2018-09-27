@@ -255,7 +255,7 @@ QuicNormalServerSessionBase::QuicNormalServerSessionBase(
 	QuicCryptoServerStream::Helper* helper,
 	const QuicCryptoServerConfig* crypto_config,
 	QuicCompressedCertsCache* compressed_certs_cache)
-	: QuicSession(connection, config),
+	: QuicNormalSession(connection, config),
 	crypto_config_(crypto_config),
 	compressed_certs_cache_(compressed_certs_cache),
 	visitor_(visitor),
@@ -270,11 +270,11 @@ QuicNormalServerSessionBase::~QuicNormalServerSessionBase() {}
 void QuicNormalServerSessionBase::Initialize() {
 	crypto_stream_.reset(
 		CreateQuicCryptoServerStream(crypto_config_, compressed_certs_cache_));
-	QuicSession::Initialize();
+	QuicNormalSession::Initialize();
 }
 
 void QuicNormalServerSessionBase::OnConfigNegotiated() {
-	QuicSession::OnConfigNegotiated();
+	QuicNormalSession::OnConfigNegotiated();
 
 	if (!config()->HasReceivedConnectionOptions()) {
 		return;
@@ -316,7 +316,7 @@ void QuicNormalServerSessionBase::OnConfigNegotiated() {
 void QuicNormalServerSessionBase::OnConnectionClosed(QuicErrorCode error,
 	const string& error_details,
 	ConnectionCloseSource source) {
-	QuicSession::OnConnectionClosed(error, error_details, source);
+	QuicNormalSession::OnConnectionClosed(error, error_details, source);
 	// In the unlikely event we get a connection close while doing an asynchronous
 	// crypto event, make sure we cancel the callback.
 	if (crypto_stream_.get() != nullptr) {
@@ -327,7 +327,7 @@ void QuicNormalServerSessionBase::OnConnectionClosed(QuicErrorCode error,
 }
 
 void QuicNormalServerSessionBase::OnWriteBlocked() {
-	QuicSession::OnWriteBlocked();
+	QuicNormalSession::OnWriteBlocked();
 	visitor_->OnWriteBlocked(connection());
 }
 
@@ -471,6 +471,16 @@ int32_t QuicNormalServerSessionBase::BandwidthToCachedParameterBytesPerSecond(
 	return (bytes_per_second > static_cast<int64_t>(INT32_MAX)
 		? INT32_MAX
 		: static_cast<int32_t>(bytes_per_second));
+}
+
+void QuicNormalServerSessionBase::SendData(base::StringPiece data)
+{
+	QuicNormalStream* stream = CreateOutgoingDynamicStream(kDefaultPriority);
+	if (stream == nullptr) {
+		QUIC_BUG << "stream creation failed!";
+		return;
+	}
+	stream->WriteOrBufferData(data, /*fin =*/ true, nullptr);
 }
 
 }  // namespace net

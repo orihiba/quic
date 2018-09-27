@@ -19,6 +19,7 @@
 #include "base/at_exit.h"
 #include "base/command_line.h"
 #include "base/logging.h"
+#include "base/synchronization/waitable_event.h"
 #include "base/run_loop.h"
 #include "base/strings/string_number_conversions.h"
 #include "net/base/ip_address.h"
@@ -27,6 +28,9 @@
 #include "net/quic/core/quic_protocol.h"
 #include "net/tools/quic/quic_in_memory_cache.h"
 #include "net/tools/quic/quic_simple_server.h"
+#include "net/tools/quic/quic_dispatcher.h"
+#include "net//tools/quic/quic_simple_server_session.h"
+
 
 // The port the quic server will listen on.
 int32_t FLAGS_port = 6121;
@@ -44,10 +48,21 @@ extern "C" EXPORT
 bool listenSocket(char * local_ip, uint16_t port);
 extern "C" EXPORT
 bool listenSocket2(char * local_ip, uint16_t port);
+extern "C" EXPORT
+int sendData(size_t connection_id, char * data);
+extern "C" EXPORT
+int recvData(size_t connection_id, char *buffer, size_t max_len);
 
 int main(int argc, char* argv[]) {
-	/*listenSocket2("0.0.0.0", 6121);
-	exit(1);*/
+	listenSocket2("0.0.0.0", 6121);
+
+	char buffer[9700] = { 0 };
+	recvData(0, buffer, 9682);
+	recvData(0, buffer, 9682);
+	sendData(0, "abcabcabc");
+
+	while (true) {};
+	exit(1);
 
   base::AtExitManager exit_manager;
   base::MessageLoopForIO message_loop;
@@ -177,44 +192,114 @@ bool initFec(uint16_t k, uint16_t m)
 	return true;
 }
 
+class SerevrThread
+	: public base::PlatformThread::Delegate {
+public:
+	SerevrThread(char * _local_ip, uint16_t _port, net::QuicNormalServer **_server, base::WaitableEvent *_session_event, base::TaskRunner **_task_runner) : local_ip(_local_ip), port(_port), server(_server), session_event(_session_event), task_runner(_task_runner) {}
+private:
+	char * local_ip;
+	uint16_t port;
+	net::QuicNormalServer **server;
+	base::WaitableEvent *session_event;
+	base::TaskRunner **task_runner;
+
+	void ThreadMain() override {
+		std::cout << "In listenSocket thread" << std::endl;
+
+		base::MessageLoopForIO message_loop;
+		logging::LoggingSettings settings;
+		settings.logging_dest = logging::LOG_TO_SYSTEM_DEBUG_LOG;
+
+		char name[10] = { 'a','b','\0' };
+		char* argv[1] = { name };
+		base::CommandLine::Init(1, argv);
+
+		net::IPAddress ip_addr;
+
+		if (!ip_addr.AssignFromIPLiteral(std::string(local_ip))) {
+			//return false;
+		}
+
+		net::QuicConfig config;
+#if defined(OS_POSIX)
+		auto certPath = base::BasicStringPiece<std::string>("certs/leaf_cert.pem");
+		auto keyPath = base::BasicStringPiece<std::string>("certs/leaf_cert.pkcs8");
+#elif defined(OS_WIN)
+		auto certPath = base::BasicStringPiece<std::wstring>(L"certs\\leaf_cert.pem");
+		auto keyPath = base::BasicStringPiece<std::wstring>(L"certs\\leaf_cert.pkcs8");
+#endif
+
+		*server = new net::QuicNormalServer(
+			CreateProofSource(base::FilePath(certPath),
+				base::FilePath(keyPath)),
+			config, net::QuicCryptoServerConfig::ConfigOptions(),
+			net::AllSupportedVersions(), 
+			session_event);
+
+		(*server)->SetStrikeRegisterNoStartupPeriod();
+
+		int rc = (*server)->Listen(net::IPEndPoint(ip_addr, port));
+		if (rc < 0) {
+			//return false;
+		}
+		*task_runner = base::ThreadTaskRunnerHandle::Get().get();
+
+		base::RunLoop().Run();
+	}
+};
+
+void send_data(net::QuicNormalServerSessionBase *session, const char *data)
+{
+	session->SendData(data);
+}
+
+net::QuicNormalServer *server;
+base::TaskRunner *task_runner;
+
+
 extern "C" EXPORT
 bool listenSocket2(char * local_ip, uint16_t port)
 {
-	std::cout << "In listenSocket" << std::endl;
-	base::MessageLoopForIO message_loop;
-	char name[10] = { 'a','b','\0' };
-	char* argv[1] = { name };
-	base::CommandLine::Init(1, argv);
-	logging::LoggingSettings settings;
-	settings.logging_dest = logging::LOG_TO_SYSTEM_DEBUG_LOG;
 
-	net::IPAddress ip_addr;
+	base::WaitableEvent *session_event = new base::WaitableEvent(base::WaitableEvent::ResetPolicy::AUTOMATIC,
+		base::WaitableEvent::InitialState::NOT_SIGNALED);
+	base::PlatformThreadHandle thread_handle;
+	SerevrThread delegate(local_ip, port, &server, session_event, &task_runner);
+	base::PlatformThread::Create(0, &delegate, &thread_handle);
 
-	if (!ip_addr.AssignFromIPLiteral(std::string(local_ip))) {
-		return false;
-	}
+	// accept:
+	session_event->Wait();
 
-	net::QuicConfig config;
-#if defined(OS_POSIX)
-	auto certPath = base::BasicStringPiece<std::string>("certs/leaf_cert.pem");
-	auto keyPath = base::BasicStringPiece<std::string>("certs/leaf_cert.pkcs8");
-#elif defined(OS_WIN)
-	auto certPath = base::BasicStringPiece<std::wstring>(L"certs\\leaf_cert.pem");
-	auto keyPath = base::BasicStringPiece<std::wstring>(L"certs\\leaf_cert.pkcs8");
-#endif
-
-	net::QuicNormalServer server(
-		CreateProofSource(base::FilePath(certPath),
-			base::FilePath(keyPath)),
-		config, net::QuicCryptoServerConfig::ConfigOptions(),
-		net::AllSupportedVersions());
-	server.SetStrikeRegisterNoStartupPeriod();
-
-	int rc = server.Listen(net::IPEndPoint(ip_addr, port));
-	if (rc < 0) {
-		return false;
-	}
-
-	base::RunLoop().Run();
 	return true;
+}
+
+extern "C" EXPORT
+int sendData(size_t connection_id, char * data)
+{
+	net::QuicDispatcher2::SessionMap session_map = server->dispatcher()->session_map();
+
+	// todo - use connection_id to get the correct session
+	net::QuicNormalServerSessionBase *session = (*session_map.begin()).second;
+
+	task_runner->PostTask(FROM_HERE, base::Bind(&send_data, session, data));
+	return 0;
+}
+
+void reset_ended_streams(net::QuicNormalServerSession *session) {
+	session->ResetStreams();
+}
+
+extern "C" EXPORT
+int recvData(size_t connection_id, char *buffer, size_t max_len)
+{
+	net::QuicDispatcher2::SessionMap session_map = server->dispatcher()->session_map();
+	
+	// todo - use connection_id to get the correct session
+	net::QuicNormalServerSessionBase *session = (*session_map.begin()).second;
+
+	while (session->ReadData(buffer, max_len) == 0) {}
+
+	task_runner->PostTask(FROM_HERE, base::Bind(&reset_ended_streams, (net::QuicNormalServerSession*)session));
+
+	return NULL;
 }

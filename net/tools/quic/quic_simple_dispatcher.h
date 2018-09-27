@@ -37,7 +37,8 @@ public:
 		QuicVersionManager* version_manager,
 		std::unique_ptr<QuicConnectionHelperInterface> helper,
 		std::unique_ptr<QuicCryptoServerStream::Helper> session_helper,
-		std::unique_ptr<QuicAlarmFactory> alarm_factory);
+		std::unique_ptr<QuicAlarmFactory> alarm_factory,
+		QuicNormalServer *server);
 
 	~QuicNormalDispatcher() override;
 	QuicPacketCount getPacketsReceivedNumber() override;

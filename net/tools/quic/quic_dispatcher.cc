@@ -1028,14 +1028,14 @@ private:
 	QuicTimeWaitListManager2* time_wait_list_manager_;
 };
 
-
 QuicDispatcher2::QuicDispatcher2(
 	const QuicConfig& config,
 	const QuicCryptoServerConfig* crypto_config,
 	QuicVersionManager* version_manager,
 	std::unique_ptr<QuicConnectionHelperInterface> helper,
 	std::unique_ptr<QuicCryptoServerStream::Helper> session_helper,
-	std::unique_ptr<QuicAlarmFactory> alarm_factory)
+	std::unique_ptr<QuicAlarmFactory> alarm_factory,
+	QuicNormalServer *server)
 	: config_(config),
 	crypto_config_(crypto_config),
 	compressed_certs_cache_(
@@ -1052,7 +1052,8 @@ QuicDispatcher2::QuicDispatcher2(
 		/*unused*/ QuicTime::Zero(),
 		Perspective::IS_SERVER),
 	last_error_(QUIC_NO_ERROR),
-	new_sessions_allowed_per_event_loop_(0u) {
+	new_sessions_allowed_per_event_loop_(0u),
+	server_(server) {
 	framer_.set_visitor(this);
 }
 
@@ -1349,6 +1350,11 @@ void QuicDispatcher2::OnConnectionAddedToTimeWaitList(
 	DVLOG(1) << "Connection " << connection_id << " added to time wait list.";
 }
 
+//void QuicDispatcher2::OnStreamClose(QuicNormalStream *stream)
+//{
+//	server_->OnStreamClose(stream);
+//}
+
 void QuicDispatcher2::OnPacket() {}
 
 void QuicDispatcher2::OnFecProtectedPayload(base::StringPiece payload) {}
@@ -1481,6 +1487,7 @@ void QuicDispatcher2::ProcessBufferedChlos(size_t max_connections_to_create) {
 			CreateQuicSession(connection_id, packets.front().client_address);
 		DVLOG(1) << "Created new session for " << connection_id;
 		session_map_.insert(std::make_pair(connection_id, session));
+		server_->session_event()->Signal();
 		DeliverPacketsToSession(packets, session);
 	}
 }
@@ -1597,6 +1604,7 @@ void QuicDispatcher2::ProcessChlo() {
 		FLAGS_quic_buffer_packet_till_chlo) {
 		--new_sessions_allowed_per_event_loop_;
 	}
+	server_->session_event()->Signal();
 }
 
 bool QuicDispatcher2::HandlePacketForTimeWait(

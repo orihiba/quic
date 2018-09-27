@@ -212,7 +212,7 @@ QuicNormalClientSessionBase::QuicNormalClientSessionBase(
 	QuicConnection* connection,
 	QuicClientPushPromiseIndex* push_promise_index,
 	const QuicConfig& config)
-	: QuicSession(connection, config) {}
+	: QuicNormalSession(connection, config) {}
 
 QuicNormalClientSessionBase::~QuicNormalClientSessionBase() {
 	delete connection();

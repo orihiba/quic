@@ -177,6 +177,10 @@ public:
 	// Override base class to detact client sending data on server push stream.
 	void OnStreamFrame(const QuicStreamFrame& frame) override;
 
+	//void OnStreamClose(QuicStreamId stream_id) override;
+
+	void ResetStreams();
+
 protected:
 	// QuicSession methods:
 	QuicNormalStream* CreateIncomingDynamicStream(QuicStreamId id) override;
@@ -196,6 +200,9 @@ protected:
 		QuicCompressedCertsCache* compressed_certs_cache) override;
 
 	DISALLOW_COPY_AND_ASSIGN(QuicNormalServerSession);
+
+private:
+	std::vector<ReliableQuicStream*> streams_to_reset_;
 };
 }  // namespace net
 

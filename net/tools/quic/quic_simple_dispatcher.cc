@@ -54,13 +54,15 @@ QuicNormalDispatcher::QuicNormalDispatcher(
 	QuicVersionManager* version_manager,
 	std::unique_ptr<QuicConnectionHelperInterface> helper,
 	std::unique_ptr<QuicCryptoServerStream::Helper> session_helper,
-	std::unique_ptr<QuicAlarmFactory> alarm_factory)
+	std::unique_ptr<QuicAlarmFactory> alarm_factory,
+	QuicNormalServer *server)
 	: QuicDispatcher2(config,
 		crypto_config,
 		version_manager,
 		std::move(helper),
 		std::move(session_helper),
-		std::move(alarm_factory)) {}
+		std::move(alarm_factory),
+		server) {}
 
 QuicNormalDispatcher::~QuicNormalDispatcher() {}
 

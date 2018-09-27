@@ -19,6 +19,9 @@
 #include "net/quic/core/crypto/quic_crypto_server_config.h"
 #include "net/quic/core/quic_clock.h"
 #include "net/quic/core/quic_config.h"
+#include "base/synchronization/waitable_event.h"
+
+#include "net/quic/core/reliable_quic_stream.h"
 
 namespace net {
 
@@ -129,7 +132,8 @@ public:
 		std::unique_ptr<ProofSource> proof_source,
 		const QuicConfig& config,
 		const QuicCryptoServerConfig::ConfigOptions& crypto_config_options,
-		const QuicVersionVector& supported_versions);
+		const QuicVersionVector& supported_versions, 
+		base::WaitableEvent *session_event);
 
 	virtual ~QuicNormalServer();
 
@@ -154,6 +158,10 @@ public:
 	QuicDispatcher2* dispatcher() { return dispatcher_.get(); }
 
 	IPEndPoint server_address() const { return server_address_; }
+
+	base::WaitableEvent *session_event() { return session_event_; }
+	base::WaitableEvent *data_event() { return data_event_; }
+	//void OnStreamClose(net::QuicNormalStream *stream);
 
 private:
 	friend class test::QuicSimpleServerPeer;
@@ -208,6 +216,11 @@ private:
 	NetLog net_log_;
 
 	base::WeakPtrFactory<QuicNormalServer> weak_factory_;
+
+	base::WaitableEvent *session_event_;
+	base::WaitableEvent *data_event_;
+
+	std::vector<std::string> data_arr;
 
 	DISALLOW_COPY_AND_ASSIGN(QuicNormalServer);
 };
