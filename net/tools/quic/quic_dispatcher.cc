@@ -1350,10 +1350,10 @@ void QuicDispatcher2::OnConnectionAddedToTimeWaitList(
 	DVLOG(1) << "Connection " << connection_id << " added to time wait list.";
 }
 
-//void QuicDispatcher2::OnStreamClose(QuicNormalStream *stream)
-//{
-//	server_->OnStreamClose(stream);
-//}
+void QuicDispatcher2::OnEncryptionEstablished()
+{
+	server_->session_event()->Signal();
+}
 
 void QuicDispatcher2::OnPacket() {}
 
@@ -1487,7 +1487,7 @@ void QuicDispatcher2::ProcessBufferedChlos(size_t max_connections_to_create) {
 			CreateQuicSession(connection_id, packets.front().client_address);
 		DVLOG(1) << "Created new session for " << connection_id;
 		session_map_.insert(std::make_pair(connection_id, session));
-		server_->session_event()->Signal();
+		/*server_->session_event()->Signal();*/
 		DeliverPacketsToSession(packets, session);
 	}
 }
@@ -1604,7 +1604,7 @@ void QuicDispatcher2::ProcessChlo() {
 		FLAGS_quic_buffer_packet_till_chlo) {
 		--new_sessions_allowed_per_event_loop_;
 	}
-	server_->session_event()->Signal();
+	/*server_->session_event()->Signal();*/
 }
 
 bool QuicDispatcher2::HandlePacketForTimeWait(

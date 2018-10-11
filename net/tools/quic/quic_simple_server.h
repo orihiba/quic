@@ -215,12 +215,12 @@ private:
 	// The log to use for the socket.
 	NetLog net_log_;
 
-	base::WeakPtrFactory<QuicNormalServer> weak_factory_;
-
 	base::WaitableEvent *session_event_;
 	base::WaitableEvent *data_event_;
 
 	std::vector<std::string> data_arr;
+
+	base::WeakPtrFactory<QuicNormalServer> weak_factory_;
 
 	DISALLOW_COPY_AND_ASSIGN(QuicNormalServer);
 };

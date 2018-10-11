@@ -615,7 +615,7 @@ protected:
 		QuicBufferedPacketStore::EnqueuePacketResult result,
 		QuicConnectionId connection_id);
 	
-	//void QuicDispatcher2::OnStreamClose(QuicNormalStream *stream);
+	void OnEncryptionEstablished() override;
 
 private:
 	friend class net::test::QuicDispatcherPeer;

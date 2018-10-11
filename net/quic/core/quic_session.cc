@@ -823,12 +823,24 @@ void QuicSession::UnregisterStream(QuicStreamId stream_id)
 QuicNormalSession::QuicNormalSession(QuicConnection* connection, const QuicConfig& config)
 	: QuicSession(connection, config) {}
 
+QuicNormalSession::~QuicNormalSession() {
+	
+}
+
+
 void QuicNormalSession::OnDataAvailable()
 {
 	// will be overided by inheritor classes
 }
 
 void QuicNormalSession::OnStreamFrame(const QuicStreamFrame& frame) {
+	//QuicStreamId stream_id = frame.stream_id;
+	//ReliableQuicStream* stream = GetOrCreateStream(stream_id);
+	//
+	//// our hack, check if the stream already should be closed by the other thread
+	//if (stream->rst_sent()) {
+	//	return;
+	//}
 	QuicSession::OnStreamFrame(frame);
 	if (frame.fin) {
 		OnDataAvailable();
@@ -846,6 +858,8 @@ int QuicNormalSession::ReadData(char *buffer, size_t len)
 	}
 	ReadableStreamMap::iterator it = readable_stream_map_.begin();
 	QuicNormalStream *stream = (QuicNormalStream*)it->second;
+
+	// check if all data arrived
 	if (stream->fin_received()) {
 		return stream->Read(buffer, len);
 	}
@@ -861,4 +875,5 @@ void QuicNormalSession::RemoveRedableStream(QuicNormalStream *stream)
 {
 	readable_stream_map_.erase(stream->id());
 }
+
 }  // namespace net

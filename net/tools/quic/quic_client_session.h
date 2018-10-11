@@ -117,7 +117,7 @@ public:
 	QuicNormalStream* CreateOutgoingDynamicStream(SpdyPriority priority) override;
 	QuicCryptoClientStreamBase* GetCryptoStream() override;
 
-	bool IsAuthorized(const std::string& authority);
+	bool IsAuthorized(const std::string& authority) override;
 
 	// QuicClientSessionBase methods:
 	void OnProofValid(const QuicCryptoClientConfig::CachedState& cached) override;

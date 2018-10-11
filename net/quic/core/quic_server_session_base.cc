@@ -475,7 +475,7 @@ int32_t QuicNormalServerSessionBase::BandwidthToCachedParameterBytesPerSecond(
 
 void QuicNormalServerSessionBase::SendData(base::StringPiece data)
 {
-	QuicNormalStream* stream = CreateOutgoingDynamicStream(kDefaultPriority);
+	QuicNormalStream* stream = (QuicNormalStream*)CreateOutgoingDynamicStream(kDefaultPriority);
 	if (stream == nullptr) {
 		QUIC_BUG << "stream creation failed!";
 		return;
@@ -483,4 +483,4 @@ void QuicNormalServerSessionBase::SendData(base::StringPiece data)
 	stream->WriteOrBufferData(data, /*fin =*/ true, nullptr);
 }
 
-}  // namespace net
+}  // namespace  

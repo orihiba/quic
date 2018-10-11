@@ -428,9 +428,9 @@ class NET_EXPORT_PRIVATE QuicNormalSession : public QuicSession
 {
 public:
 	QuicNormalSession(QuicConnection* connection, const QuicConfig& config);
-
+	~QuicNormalSession() override;
 	virtual void OnDataAvailable();
-	void OnStreamFrame(const QuicStreamFrame& frame);
+	void OnStreamFrame(const QuicStreamFrame& frame) override;
 	using ReadableStreamMap =
 		base::SmallMap<std::unordered_map<QuicStreamId, QuicNormalStream*>, 2>;
 	ReadableStreamMap readable_stream_map_;

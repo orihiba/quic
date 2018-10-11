@@ -46,7 +46,7 @@ public:
 protected:
 	QuicNormalServerSessionBase* CreateQuicSession(
 		QuicConnectionId connection_id,
-		const IPEndPoint& client_address);
+		const IPEndPoint& client_address) override;
 };
 
 }  // namespace net

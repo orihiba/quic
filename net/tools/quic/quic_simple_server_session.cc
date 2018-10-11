@@ -248,7 +248,12 @@ void QuicNormalServerSession::OnStreamFrame(const QuicStreamFrame& frame) {
 	//	return;
 	//}
 	QuicNormalSession::OnStreamFrame(frame);
-
+	
+	if (frame.stream_id == 1) {
+		if (crypto_stream()->encryption_established()) {
+			visitor()->OnEncryptionEstablished();
+		}
+	}
 	//if (frame.fin) {
 	//	QuicNormalStream *stream = (QuicNormalStream *)GetOrCreateDynamicStream(frame.stream_id);
 	//	//IOBuffer* buf = new IOBuffer(0x100000);
@@ -291,25 +296,27 @@ void QuicNormalServerSession::CloseStreamInner(QuicStreamId stream_id,
 	bool locally_reset) {
 
 	auto stream = GetOrCreateDynamicStream(stream_id);
+	stream->set_rst_sent(true); // mark as done
+	QuicNormalSession::CloseStreamInner(stream_id, locally_reset);
 
-	if (!stream->fin_sent()) {
-		// should send RST. do it in other thread.
+	//if (!stream->fin_sent()) {
+	//	// should send RST. do it in other thread.
 
-		// check if already called, and called now from the correct thread
-		if (!stream->rst_sent()) {
-			stream->set_rst_sent(true); // mark as done
-			streams_to_reset_.push_back(stream);
-		} else {
-			QuicNormalSession::CloseStreamInner(stream_id, locally_reset);
-
-		}
-		
-		//visitor()->OnStreamClose((QuicNormalStream*)stream);
-	} else {
-		QuicNormalSession::CloseStreamInner(stream_id, locally_reset);
-	}
+	//	// check if already called, and called now from the correct thread
+	//	if (!stream->rst_sent()) {
+	//		stream->set_rst_sent(true); // mark as done
+	//		streams_to_reset_.push_back(stream);
+	//	} else {
+	//		QuicNormalSession::CloseStreamInner(stream_id, locally_reset);
+	//	}
+	//	
+	//	//visitor()->OnStreamClose((QuicNormalStream*)stream);
+	//} else {
+	//	QuicNormalSession::CloseStreamInner(stream_id, locally_reset);
+	//}
 }
 
+// not used (the sending client will close the stream by itself)
 void QuicNormalServerSession::ResetStreams()
 {
 	for (const auto & st : streams_to_reset_) {

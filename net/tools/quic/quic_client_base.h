@@ -501,7 +501,7 @@ public:
 
 		// Must be overridden by specific classes with the actual method for
 		// re-sending data.
-		//virtual void Resend() = 0;
+		virtual void Resend() = 0;
 
 	protected:
 		std::unique_ptr<SpdyHeaderBlock> headers_;
@@ -811,7 +811,7 @@ private:
 
 		~ClientQuicDataToResend() override {}
 
-	//	void Resend() override;
+		void Resend() override;
 
 	private:
 		QuicNormalClientBase* client_;

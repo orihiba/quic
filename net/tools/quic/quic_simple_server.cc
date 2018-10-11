@@ -226,9 +226,9 @@ QuicNormalServer::QuicNormalServer(
 	read_pending_(false),
 	synchronous_read_count_(0),
 	read_buffer_(new IOBufferWithSize(kReadBufferSize)),
-	weak_factory_(this),
 	session_event_(session_event),
-	data_arr() {
+	data_arr(),
+	weak_factory_(this) {
 		data_event_ = new base::WaitableEvent(base::WaitableEvent::ResetPolicy::AUTOMATIC,
 			base::WaitableEvent::InitialState::NOT_SIGNALED);
 	Initialize();

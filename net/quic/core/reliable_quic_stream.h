@@ -223,6 +223,8 @@ class NET_EXPORT_PRIVATE ReliableQuicStream {
     stream_contributes_to_connection_flow_control_ = false;
   }
 
+  void CloseReadSideHack();
+
  private:
   friend class test::ReliableQuicStreamPeer;
   friend class QuicStreamUtils;
@@ -351,7 +353,7 @@ public:
 	// Override to maybe close the write side after writing.
 	void OnCanWrite() override;
 
-	virtual void OnDataAvailable() override;
+	void OnDataAvailable() override;
 
 	// Override the base class to not discard response when receiving
 	// QUIC_STREAM_NO_ERROR.
@@ -378,8 +380,11 @@ public:
 	// will be available.
 	bool IsClosed() { return sequencer()->IsClosed(); }
 
-	int QuicNormalStream::Read(char* buf, int buf_len);
-	int QuicNormalStream::ReadAll(char* buf, int buf_len);
+	void WriteOrBufferData(base::StringPiece data,
+		bool fin,
+		QuicAckListenerInterface* ack_listener);
+	int Read(char* buf, size_t buf_len);
+	int ReadAll(char* buf, int buf_len);
 
 	const std::string& data() const { return data_; }
 
@@ -407,8 +412,8 @@ private:
 	// server or a client.
 	Perspective perspective_;
 
-	virtual void OnStreamFrame(const QuicStreamFrame& frame) override;
-	virtual void OnFinRead() override;
+	void OnStreamFrame(const QuicStreamFrame& frame) override;
+	void OnFinRead() override;
 
 	DISALLOW_COPY_AND_ASSIGN(QuicNormalStream);
 };

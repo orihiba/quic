@@ -192,6 +192,7 @@ public:
 			QuicNormalServerSessionBase* session) = 0;
 
 		//virtual void OnStreamClose(QuicNormalStream *stream) = 0;
+		virtual void OnEncryptionEstablished() = 0;
 	};
 
 	// Does not take ownership of |connection|. |crypto_config| must outlive the
@@ -240,9 +241,6 @@ protected:
 	// established yet or number of server initiated streams already reaches the
 	// upper limit.
 	bool ShouldCreateOutgoingDynamicStream();
-
-	virtual QuicNormalStream* CreateOutgoingDynamicStream(
-		SpdyPriority priority) = 0;
 
 	// If we should create an incoming stream, returns true. Otherwise
 	// does error handling, including communicating the error to the client and

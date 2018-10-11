@@ -376,6 +376,10 @@ void ReliableQuicStream::CloseReadSide() {
   }
 }
 
+void ReliableQuicStream::CloseReadSideHack() {
+	CloseReadSide();
+}
+
 void ReliableQuicStream::CloseWriteSide() {
   if (write_side_closed_) {
     return;
@@ -490,8 +494,8 @@ void ReliableQuicStream::UpdateSendWindowOffset(QuicStreamOffset new_window) {
 
 QuicNormalStream::QuicNormalStream(QuicStreamId id, QuicSession * quic_session)
 	: ReliableQuicStream(id, quic_session),
-	visitor_(nullptr),
-	session_(quic_session) {
+	session_(quic_session),
+	visitor_(nullptr) {
 	session_->RegisterStream(id);
 }
 
@@ -627,7 +631,7 @@ void QuicNormalStream::OnDataAvailable() {
 	//}
 }
 
-int QuicNormalStream::Read(char* buf, int buf_len) {
+int QuicNormalStream::Read(char* buf, size_t buf_len) {
 	//if (IsDoneReading())
 	//	return 0;  // EOF
 
@@ -697,6 +701,18 @@ void QuicNormalStream::OnFinRead()
 	cur_session->RemoveRedableStream(this);
 
 	CloseWriteSide(); // this stream is used for read only. this will close the stream
+}
+
+void QuicNormalStream::WriteOrBufferData(
+	StringPiece data,
+	bool fin,
+	QuicAckListenerInterface* ack_listener)
+{
+	// this stream is for write only. Now WriteOrBufferData will close the stream
+	if (fin) {
+		CloseReadSideHack();
+	}
+	ReliableQuicStream::WriteOrBufferData(data, fin, ack_listener);
 }
 
 }  // namespace net

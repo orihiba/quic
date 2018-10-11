@@ -47,25 +47,52 @@ std::unique_ptr<net::ProofSource> CreateProofSource(
 extern "C" EXPORT
 bool listenSocket(char * local_ip, uint16_t port);
 extern "C" EXPORT
-bool listenSocket2(char * local_ip, uint16_t port);
+size_t listenSocket2(const char * local_ip, uint16_t port);
 extern "C" EXPORT
 int sendData(size_t connection_id, char * data);
 extern "C" EXPORT
 int recvData(size_t connection_id, char *buffer, size_t max_len);
 
-int main(int argc, char* argv[]) {
-	listenSocket2("0.0.0.0", 6121);
+net::QuicNormalServer *server;
+base::TaskRunner *task_runner;
 
-	char buffer[9700] = { 0 };
-	recvData(0, buffer, 9682);
-	recvData(0, buffer, 9682);
-	sendData(0, "abcabcabc");
+void server2()
+{
+	size_t connection_id = listenSocket2("0.0.0.0", 6121);
+	connection_id = 0;
+	sendData(connection_id, "abcabcabc");
+	while (true);
+	/*connection_id = listenSocket2("0.0.0.0", 6121);
+	sendData(connection_id, "abcabcabc");
+	*///sendData(connection_id, "ddddeeee");
+	//sendData(connection_id, "ffgghhjj");
 
-	while (true) {};
+
+	/*char buffer[9700] = { 0 };
+	int bytes_received = 0;
+
+	bytes_received = recvData(connection_id, buffer, 9682);
+	buffer[bytes_received] = '\0';
+	std::cout << "Received: " << buffer << std::endl;
+
+	bytes_received = recvData(connection_id, buffer, 9682);
+	buffer[bytes_received] = '\0';
+	std::cout << "Received: " << buffer << std::endl;
+
+	bytes_received = recvData(connection_id, buffer, 9682);
+	buffer[bytes_received] = '\0';
+	std::cout << "Received: " << buffer << std::endl;*/
+
+	//	sendData(connection_id, "abcabcabc");
+
+	//while (true) {};
+	server->data_event()->Wait();
 	exit(1);
+}
 
-  base::AtExitManager exit_manager;
-  base::MessageLoopForIO message_loop;
+int main(int argc, char* argv[]) {
+
+ 
 
   base::CommandLine::Init(argc, argv);
   base::CommandLine* line = base::CommandLine::ForCurrentProcess();
@@ -73,6 +100,11 @@ int main(int argc, char* argv[]) {
   logging::LoggingSettings settings;
   settings.logging_dest = logging::LOG_TO_SYSTEM_DEBUG_LOG;
   CHECK(logging::InitLogging(settings));
+
+  server2();
+
+  base::AtExitManager exit_manager;
+  base::MessageLoopForIO message_loop;
 
   if (line->HasSwitch("h") || line->HasSwitch("help")) {
     const char* help_str =
@@ -195,9 +227,9 @@ bool initFec(uint16_t k, uint16_t m)
 class SerevrThread
 	: public base::PlatformThread::Delegate {
 public:
-	SerevrThread(char * _local_ip, uint16_t _port, net::QuicNormalServer **_server, base::WaitableEvent *_session_event, base::TaskRunner **_task_runner) : local_ip(_local_ip), port(_port), server(_server), session_event(_session_event), task_runner(_task_runner) {}
+	SerevrThread(const char * _local_ip, uint16_t _port, net::QuicNormalServer **_server, base::WaitableEvent *_session_event, base::TaskRunner **_task_runner) : local_ip(_local_ip), port(_port), server(_server), session_event(_session_event), task_runner(_task_runner) {}
 private:
-	char * local_ip;
+	const char * local_ip;
 	uint16_t port;
 	net::QuicNormalServer **server;
 	base::WaitableEvent *session_event;
@@ -207,8 +239,8 @@ private:
 		std::cout << "In listenSocket thread" << std::endl;
 
 		base::MessageLoopForIO message_loop;
-		logging::LoggingSettings settings;
-		settings.logging_dest = logging::LOG_TO_SYSTEM_DEBUG_LOG;
+		//logging::LoggingSettings settings;
+		//settings.logging_dest = logging::LOG_TO_SYSTEM_DEBUG_LOG;
 
 		char name[10] = { 'a','b','\0' };
 		char* argv[1] = { name };
@@ -253,35 +285,51 @@ void send_data(net::QuicNormalServerSessionBase *session, const char *data)
 	session->SendData(data);
 }
 
-net::QuicNormalServer *server;
-base::TaskRunner *task_runner;
-
 
 extern "C" EXPORT
-bool listenSocket2(char * local_ip, uint16_t port)
+size_t listenSocket2(const char * local_ip, uint16_t port)
 {
-
-	base::WaitableEvent *session_event = new base::WaitableEvent(base::WaitableEvent::ResetPolicy::AUTOMATIC,
+	static base::WaitableEvent *session_event = new base::WaitableEvent(base::WaitableEvent::ResetPolicy::AUTOMATIC,
 		base::WaitableEvent::InitialState::NOT_SIGNALED);
-	base::PlatformThreadHandle thread_handle;
-	SerevrThread delegate(local_ip, port, &server, session_event, &task_runner);
-	base::PlatformThread::Create(0, &delegate, &thread_handle);
+	static base::PlatformThreadHandle thread_handle;
+	static SerevrThread delegate(local_ip, port, &server, session_event, &task_runner);
+	if (thread_handle.is_null()) {
+		base::PlatformThread::Create(0, &delegate, &thread_handle);
+	}
 
 	// accept:
 	session_event->Wait();
+	
+	net::QuicDispatcher2::SessionMap session_map = server->dispatcher()->session_map();
+	net::QuicDispatcher2::SessionMap::iterator it = session_map.begin();
+	while (std::next(it) != session_map.end()) {
+		it = std::next(it);
+	}
 
-	return true;
+	return it->first;
+}
+
+net::QuicNormalServerSessionBase *connectionToSession(size_t connection_id, net::QuicNormalServer *server)
+{
+	net::QuicDispatcher2::SessionMap session_map = server->dispatcher()->session_map();
+
+	net::QuicDispatcher2::SessionMap::iterator it = session_map.find(connection_id);
+	if (it == session_map.end()) {
+		return nullptr;
+	}
+	return it->second;
 }
 
 extern "C" EXPORT
 int sendData(size_t connection_id, char * data)
 {
-	net::QuicDispatcher2::SessionMap session_map = server->dispatcher()->session_map();
-
-	// todo - use connection_id to get the correct session
-	net::QuicNormalServerSessionBase *session = (*session_map.begin()).second;
+	net::QuicNormalServerSessionBase *session = connectionToSession(connection_id, server);
+	if (session == nullptr) {
+		return -1;
+	}
 
 	task_runner->PostTask(FROM_HERE, base::Bind(&send_data, session, data));
+
 	return 0;
 }
 
@@ -292,14 +340,24 @@ void reset_ended_streams(net::QuicNormalServerSession *session) {
 extern "C" EXPORT
 int recvData(size_t connection_id, char *buffer, size_t max_len)
 {
-	net::QuicDispatcher2::SessionMap session_map = server->dispatcher()->session_map();
-	
-	// todo - use connection_id to get the correct session
-	net::QuicNormalServerSessionBase *session = (*session_map.begin()).second;
+	net::QuicNormalServerSessionBase *session = nullptr;
+	int bytes_read = 0;
+	do {
+		session = connectionToSession(connection_id, server);
+		if (session == nullptr) {
+			return -1;
+		}
+		bytes_read = session->ReadData(buffer, max_len);
+	} while (bytes_read == 0);
 
-	while (session->ReadData(buffer, max_len) == 0) {}
+	// maybe not necessary
+	//task_runner->PostTask(FROM_HERE, base::Bind(&reset_ended_streams, (net::QuicNormalServerSession*)session));
 
-	task_runner->PostTask(FROM_HERE, base::Bind(&reset_ended_streams, (net::QuicNormalServerSession*)session));
+	return bytes_read;
+}
 
-	return NULL;
+void flush()
+{
+	base::RunLoop().RunUntilIdle();
+	server->data_event()->Signal();
 }

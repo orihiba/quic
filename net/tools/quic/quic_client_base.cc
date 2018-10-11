@@ -230,8 +230,6 @@ void QuicClientBase::SendRequest(const SpdyHeaderBlock& headers,
 void QuicClientBase::WriteOrBufferData(base::StringPiece data,
 	bool fin)
 {
-	void *a = this;
-	a = a;
 	QuicSpdyClientStream* stream = CreateReliableClientStream();
 	if (stream == nullptr) {
 		QUIC_BUG << "stream creation failed!";
@@ -534,10 +532,10 @@ const string& QuicClientBase::latest_response_trailers() const {
 
 // -----------------------------------------------------------------------------------------------
 
-//void QuicNormalClientBase::ClientQuicDataToResend::Resend() {
-//	client_->SendRequest(*headers_, body_, fin_);
-//	headers_ = nullptr;
-//}
+void QuicNormalClientBase::ClientQuicDataToResend::Resend() {
+	client_->WriteOrBufferData(body_, fin_);
+	headers_ = nullptr;
+}
 
 QuicNormalClientBase::QuicDataToResend::QuicDataToResend(
 	std::unique_ptr<SpdyHeaderBlock> headers,
@@ -573,8 +571,6 @@ QuicNormalClientBase::QuicNormalClientBase(const QuicServerId& server_id,
 QuicNormalClientBase::~QuicNormalClientBase() {}
 
 void QuicNormalClientBase::OnClose(QuicNormalStream* stream) {
-	int a = 0;
-	a = 1;
 	//DCHECK(stream != nullptr);
 	//QuicNormalStream* client_stream =
 	//	static_cast<QuicNormalStream*>(stream);
@@ -726,8 +722,6 @@ bool QuicNormalClientBase::EncryptionBeingEstablished() {
 void QuicNormalClientBase::WriteOrBufferData(base::StringPiece data,
 	bool fin)
 {
-	void *a = this;
-	a = a;
 	QuicNormalStream* stream = CreateReliableClientStream();
 	if (stream == nullptr) {
 		QUIC_BUG << "stream creation failed!";
@@ -744,14 +738,13 @@ int QuicNormalClientBase::Recv(char *buf, size_t len) {
 	/*while (!data_available_) {
 		WaitForEvents();
 	}*/
-	
-	while (session_->ReadData(buf, len) == 0) {
+	int bytes_read = 0;
+
+	while (bytes_read == 0) {
 		RunEventLoop();
+		bytes_read = session_->ReadData(buf, len);
 	}
-	
-	int a = 2;
-	a = 1;
-	return 0;
+	return bytes_read;
 }
 
 //void QuicNormalClientBase::SendRequestAndWaitForResponse(
