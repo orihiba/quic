@@ -33,6 +33,8 @@
 #include "net/quic/core/quic_protocol.h"
 #include "net/quic/core/quic_stream_sequencer.h"
 #include "net/quic/core/quic_types.h"
+#include "net/quic/core/quic_one_block_arena.h"
+#include "net/quic/core/quic_alarm.h"
 #include "net/base/io_buffer.h"
 
 namespace net {
@@ -342,6 +344,8 @@ public:
 	QuicNormalStream(QuicStreamId id, QuicSession* quic_session);
 	~QuicNormalStream() override;
 
+	QuicArenaScopedPtr<QuicAlarm> bounded_delay_alarm_;
+
 	// Override the base class to send QUIC_STREAM_NO_ERROR to the peer
 	// when the stream has not received all the data.
 	void CloseWriteSide() override;
@@ -405,6 +409,8 @@ private:
 	QuicSession* session_;
 
 	Visitor* visitor_;
+
+	QuicOneBlockArena<1024> arena_;
 
 	std::string data_;
 

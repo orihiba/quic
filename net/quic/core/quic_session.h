@@ -232,6 +232,9 @@ class NET_EXPORT_PRIVATE QuicSession : public QuicConnectionVisitorInterface {
   void RegisterStream(QuicStreamId stream_id);
   void UnregisterStream(QuicStreamId stream_id);
 
+  // Return true if given stream is peer initiated.
+  bool IsIncomingStream(QuicStreamId id) const;
+
  protected:
   using StaticStreamMap =
       base::SmallMap<std::unordered_map<QuicStreamId, ReliableQuicStream*>, 2>;
@@ -279,9 +282,6 @@ class NET_EXPORT_PRIVATE QuicSession : public QuicConnectionVisitorInterface {
   void UpdateFlowControlOnFinalReceivedByteOffset(
       QuicStreamId id,
       QuicStreamOffset final_byte_offset);
-
-  // Return true if given stream is peer initiated.
-  bool IsIncomingStream(QuicStreamId id) const;
 
   StaticStreamMap& static_streams() { return static_stream_map_; }
   const StaticStreamMap& static_streams() const { return static_stream_map_; }
@@ -435,6 +435,7 @@ public:
 		base::SmallMap<std::unordered_map<QuicStreamId, QuicNormalStream*>, 2>;
 	ReadableStreamMap readable_stream_map_;
 	int ReadData(char *buffer, size_t len);
+	void CloseStreamInner(QuicStreamId stream_id, bool locally_reset) override;
 
 	void AddRedableStream(QuicNormalStream *stream);
 	void RemoveRedableStream(QuicNormalStream *stream);

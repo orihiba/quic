@@ -491,11 +491,33 @@ void ReliableQuicStream::UpdateSendWindowOffset(QuicStreamOffset new_window) {
 
 
 // --------------------------------------------------------------------------------------------------
+class BoundedAlarmDelegate : public QuicAlarm::Delegate {
+public:
+	explicit BoundedAlarmDelegate(QuicNormalStream* stream)
+		: stream_(stream) {}
+
+	void OnAlarm() override { stream_->Reset(QUIC_STREAM_CANCELLED); }
+
+private:
+	QuicNormalStream* stream_;
+
+	DISALLOW_COPY_AND_ASSIGN(BoundedAlarmDelegate);
+};
 
 QuicNormalStream::QuicNormalStream(QuicStreamId id, QuicSession * quic_session)
 	: ReliableQuicStream(id, quic_session),
 	session_(quic_session),
-	visitor_(nullptr) {
+	visitor_(nullptr),
+	bounded_delay_alarm_(nullptr),
+	arena_() {
+
+	if (session_->IsIncomingStream(id)) {
+		bounded_delay_alarm_ = session_->connection()->alarm_factory()->CreateAlarm(
+			arena_.New<BoundedAlarmDelegate>(this),
+			&arena_);
+		bounded_delay_alarm_->Set(session_->connection()->clock()->ApproximateNow() + QuicTime::Delta::FromMilliseconds(10000));
+	}
+
 	session_->RegisterStream(id);
 }
 
@@ -577,6 +599,10 @@ void QuicNormalStream::OnClose() {
 		// so we need to ensure we don't call it again.
 		visitor_ = nullptr;
 		visitor->OnClose(this);
+	}
+
+	if (bounded_delay_alarm_ != nullptr) {
+		bounded_delay_alarm_->Cancel();
 	}
 
 	ReliableQuicStream::OnClose();

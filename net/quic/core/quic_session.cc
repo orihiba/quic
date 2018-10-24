@@ -873,7 +873,18 @@ void QuicNormalSession::AddRedableStream(QuicNormalStream *stream)
 
 void QuicNormalSession::RemoveRedableStream(QuicNormalStream *stream)
 {
+	// for outgoing stream, nothing will happen
 	readable_stream_map_.erase(stream->id());
+}
+
+void QuicNormalSession::CloseStreamInner(QuicStreamId stream_id, bool locally_reset) {
+	DynamicStreamMap::iterator it = dynamic_streams().find(stream_id);
+	if (it == dynamic_streams().end()) {
+		return;
+	}
+	ReliableQuicStream* stream = it->second;
+	RemoveRedableStream((QuicNormalStream*)stream);
+	QuicSession::CloseStreamInner(stream_id, locally_reset);
 }
 
 }  // namespace net
