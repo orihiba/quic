@@ -388,9 +388,13 @@ public:
 		bool fin,
 		QuicAckListenerInterface* ack_listener);
 	int Read(char* buf, size_t buf_len);
+	int ReadFifo(char* buf, size_t buf_len);
+	int ReadFifoInner(char* buf, size_t buf_len);
+	
 	int ReadAll(char* buf, int buf_len);
 
 	const std::string& data() const { return data_; }
+	const uint32_t bytes_remaining() const { return bytes_remaining_; }
 
 protected:
 	
@@ -413,6 +417,8 @@ private:
 	QuicOneBlockArena<1024> arena_;
 
 	std::string data_;
+
+	uint32_t bytes_remaining_;
 
 	// Tracks if the session this stream is running under was created by a
 	// server or a client.

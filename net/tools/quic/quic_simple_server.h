@@ -133,7 +133,8 @@ public:
 		const QuicConfig& config,
 		const QuicCryptoServerConfig::ConfigOptions& crypto_config_options,
 		const QuicVersionVector& supported_versions, 
-		base::WaitableEvent *session_event);
+		base::WaitableEvent *session_event,
+		bool is_fifo);
 
 	virtual ~QuicNormalServer();
 
@@ -162,6 +163,8 @@ public:
 	base::WaitableEvent *session_event() { return session_event_; }
 	base::WaitableEvent *data_event() { return data_event_; }
 	//void OnStreamClose(net::QuicNormalStream *stream);
+
+	bool is_fifo() { return is_fifo_;  }
 
 private:
 	friend class test::QuicSimpleServerPeer;
@@ -221,6 +224,8 @@ private:
 	std::vector<std::string> data_arr;
 
 	base::WeakPtrFactory<QuicNormalServer> weak_factory_;
+
+	bool is_fifo_;
 
 	DISALLOW_COPY_AND_ASSIGN(QuicNormalServer);
 };

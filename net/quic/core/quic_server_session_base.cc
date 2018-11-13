@@ -473,14 +473,29 @@ int32_t QuicNormalServerSessionBase::BandwidthToCachedParameterBytesPerSecond(
 		: static_cast<int32_t>(bytes_per_second));
 }
 
-void QuicNormalServerSessionBase::SendData(base::StringPiece data)
+QuicNormalStream *last_stream = nullptr;
+
+void QuicNormalServerSessionBase::SendData(base::StringPiece data, bool last_message)
 {
-	QuicNormalStream* stream = (QuicNormalStream*)CreateOutgoingDynamicStream(kDefaultPriority);
-	if (stream == nullptr) {
-		QUIC_BUG << "stream creation failed!";
-		return;
+	QuicNormalStream *stream;
+
+	if (last_stream != nullptr) {
+		stream = last_stream;
 	}
-	stream->WriteOrBufferData(data, /*fin =*/ true, nullptr);
+	else {
+		stream = (QuicNormalStream*)CreateOutgoingDynamicStream(kDefaultPriority);
+		if (stream == nullptr) {
+			QUIC_BUG << "stream creation failed!";
+			return;
+		}
+		last_stream = stream;
+	}
+
+	if (last_message) {
+		last_stream = nullptr;
+	}
+
+	stream->WriteOrBufferData(data, last_message, nullptr);
 }
 
 }  // namespace  

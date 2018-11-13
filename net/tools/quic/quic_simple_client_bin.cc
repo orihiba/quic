@@ -153,6 +153,14 @@ void client2()
 	char buffer[10000];
 	int bytes_received = 0;
 	//while (true);
+	bytes_received = recvData(buffer, 5);
+	buffer[bytes_received] = '\0';
+	std::cout << "Received: " << buffer << std::endl;
+
+	bytes_received = recvData(buffer, 5);
+	buffer[bytes_received] = '\0';
+	std::cout << "Received: " << buffer << std::endl;
+
 	bytes_received = recvData(buffer, 10000);
 	buffer[bytes_received] = '\0';
 	std::cout << "Received: " << buffer << std::endl;
@@ -619,7 +627,7 @@ bool connectServer2(const char * host, uint16_t port)
 			ct_verifier.get()));
 	std::unique_ptr<net::QuicNormalClient> client(
 		new net::QuicNormalClient(net::IPEndPoint(ip_addr, port), server_id,
-			versions, std::move(proof_verifier)));
+			versions, std::move(proof_verifier), false /* is_fifo */));
 	client->set_initial_max_packet_length(net::kDefaultMaxPacketSize);
 	if (!client->Initialize()) {
 		cerr << "Failed to initialize client." << endl;

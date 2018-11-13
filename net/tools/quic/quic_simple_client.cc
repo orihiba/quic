@@ -184,25 +184,29 @@ QuicNormalClient::QuicNormalClient(
 	IPEndPoint server_address,
 	const QuicServerId& server_id,
 	const QuicVersionVector& supported_versions,
-	std::unique_ptr<ProofVerifier> proof_verifier)
+	std::unique_ptr<ProofVerifier> proof_verifier,
+	bool is_fifo)
 	: QuicNormalClient(server_address,
 		server_id,
 		supported_versions,
 		QuicConfig(),
-		std::move(proof_verifier)) {}
+		std::move(proof_verifier),
+		is_fifo) {}
 
 QuicNormalClient::QuicNormalClient(
 	IPEndPoint server_address,
 	const QuicServerId& server_id,
 	const QuicVersionVector& supported_versions,
 	const QuicConfig& config,
-	std::unique_ptr<ProofVerifier> proof_verifier)
+	std::unique_ptr<ProofVerifier> proof_verifier,
+	bool is_fifo)
 	: QuicNormalClientBase(server_id,
 		supported_versions,
 		config,
 		CreateQuicConnectionHelper(),
 		CreateQuicAlarmFactory(),
-		std::move(proof_verifier)),
+		std::move(proof_verifier),
+		is_fifo),
 	initialized_(false),
 	packet_reader_started_(false),
 	weak_factory_(this) {

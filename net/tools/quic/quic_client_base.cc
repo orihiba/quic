@@ -550,7 +550,8 @@ QuicNormalClientBase::QuicNormalClientBase(const QuicServerId& server_id,
 	const QuicConfig& config,
 	QuicConnectionHelperInterface* helper,
 	QuicAlarmFactory* alarm_factory,
-	std::unique_ptr<ProofVerifier> proof_verifier)
+	std::unique_ptr<ProofVerifier> proof_verifier,
+	bool is_fifo)
 	: server_id_(server_id),
 	initialized_(false),
 	local_port_(0),
@@ -566,7 +567,8 @@ QuicNormalClientBase::QuicNormalClientBase(const QuicServerId& server_id,
 	connected_or_attempting_connect_(false),
 	store_response_(false),
 	latest_response_code_(-1),
-	wanted_active_requests_(0) {}
+	wanted_active_requests_(0),
+	is_fifo_(is_fifo) {}
 
 QuicNormalClientBase::~QuicNormalClientBase() {}
 
@@ -708,6 +710,7 @@ QuicNormalClientSession* QuicNormalClientBase::CreateQuicClientSession(
 	QuicConnection* connection) {
 	session_.reset(new QuicNormalClientSession(config_, connection, server_id_,
 		&crypto_config_, &push_promise_index_));
+	((QuicNormalSession*)session_.get())->SetFifoSession(is_fifo_);
 	if (initial_max_packet_length_ != 0) {
 		session()->connection()->SetMaxPacketLength(initial_max_packet_length_);
 	}

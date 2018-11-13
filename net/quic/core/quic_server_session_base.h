@@ -218,7 +218,7 @@ public:
 
 	void Initialize() override;
 
-	void SendData(base::StringPiece data);
+	void SendData(base::StringPiece data, bool last_message);
 
 	const QuicCryptoServerStreamBase* crypto_stream() const {
 		return crypto_stream_.get();

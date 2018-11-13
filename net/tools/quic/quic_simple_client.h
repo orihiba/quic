@@ -117,12 +117,14 @@ public:
 	QuicNormalClient(IPEndPoint server_address,
 		const QuicServerId& server_id,
 		const QuicVersionVector& supported_versions,
-		std::unique_ptr<ProofVerifier> proof_verifier);
+		std::unique_ptr<ProofVerifier> proof_verifier,
+		bool is_fifo);
 	QuicNormalClient(IPEndPoint server_address,
 		const QuicServerId& server_id,
 		const QuicVersionVector& supported_versions,
 		const QuicConfig& config,
-		std::unique_ptr<ProofVerifier> proof_verifier);
+		std::unique_ptr<ProofVerifier> proof_verifier,
+		bool is_fifo);
 
 	~QuicNormalClient() override;
 

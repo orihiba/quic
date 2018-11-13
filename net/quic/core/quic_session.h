@@ -439,6 +439,15 @@ public:
 
 	void AddRedableStream(QuicNormalStream *stream);
 	void RemoveRedableStream(QuicNormalStream *stream);
+
+	void SetFifoSession(bool is_fifo) {
+		fifo_session_ = is_fifo;
+	}
+
+	bool fifo_session() { return fifo_session_; }
+
+private:
+	bool fifo_session_;
 };
 }  // namespace net
 

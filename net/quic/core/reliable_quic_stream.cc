@@ -509,13 +509,14 @@ QuicNormalStream::QuicNormalStream(QuicStreamId id, QuicSession * quic_session)
 	session_(quic_session),
 	visitor_(nullptr),
 	bounded_delay_alarm_(nullptr),
-	arena_() {
+	arena_(),
+	bytes_remaining_(0) {
 
 	if (session_->IsIncomingStream(id)) {
 		bounded_delay_alarm_ = session_->connection()->alarm_factory()->CreateAlarm(
 			arena_.New<BoundedAlarmDelegate>(this),
 			&arena_);
-		bounded_delay_alarm_->Set(session_->connection()->clock()->ApproximateNow() + QuicTime::Delta::FromMilliseconds(10000));
+		bounded_delay_alarm_->Set(session_->connection()->clock()->ApproximateNow() + QuicTime::Delta::FromMilliseconds(100000));
 	}
 
 	session_->RegisterStream(id);
@@ -657,20 +658,8 @@ void QuicNormalStream::OnDataAvailable() {
 	//}
 }
 
-int QuicNormalStream::Read(char* buf, size_t buf_len) {
-	//if (IsDoneReading())
-	//	return 0;  // EOF
-
-	//if (!HasBytesToRead())
-	//	return -1;
-
-	//iovec iov;
-	//iov.iov_base = buf;
-	//iov.iov_len = buf_len;
-	//size_t bytes_read = Readv(&iov, 1);
-	//
-	//return bytes_read;
-
+int QuicNormalStream::Read(char* buf, size_t buf_len)
+{
 	std::string data;
 	while (HasBytesToRead() && buf_len) {
 		struct iovec iov;
@@ -701,6 +690,76 @@ int QuicNormalStream::Read(char* buf, size_t buf_len) {
 	return data.size();
 }
 
+int QuicNormalStream::ReadFifoInner(char* buf, size_t buf_len)
+{
+	if (!data_.empty()) {
+		// if new message
+		if (bytes_remaining_ == 0) {
+			bytes_remaining_ = *(uint32_t *)(data_.c_str());
+			data_.erase(0, sizeof(bytes_remaining_));
+		}
+
+		size_t bytes_to_read = bytes_remaining_ < buf_len ? bytes_remaining_ : buf_len;
+
+		// if received more than a message, cut the first message
+		if (bytes_to_read < data_.size()) {
+			strncpy(buf, data_.c_str(), bytes_to_read);
+
+			// mark as read
+			data_.erase(0, bytes_to_read);
+
+			bytes_remaining_ -= bytes_to_read;
+			return bytes_to_read;
+		}
+	}
+	return 0;
+}
+
+int QuicNormalStream::ReadFifo(char* buf, size_t buf_len) {
+	if (!data_.empty()) {
+		int res = this->ReadFifoInner(buf, buf_len);
+		if (res != 0) {
+			return res;
+		}
+	}
+
+	while (HasBytesToRead()) {
+		struct iovec iov;
+		if (GetReadableRegions(&iov, 1) == 0) {
+			// No more data to read.
+			break;
+		}
+
+		DVLOG(1) << ENDPOINT << " processed " << iov.iov_len << " bytes for stream "
+			<< id();
+		data_.append(static_cast<char*>(iov.iov_base), iov.iov_len);
+		MarkConsumed(iov.iov_len);
+
+		int res = this->ReadFifoInner(buf, buf_len);
+		if (res != 0) {
+			return res;
+		}
+	}
+
+	// didn't receive the whole message
+	if (bytes_remaining_ != data_.size()) {
+		return 0;
+	}
+
+	if (sequencer()->IsClosed()) {
+		OnFinRead();
+	}
+	else {
+		sequencer()->SetUnblocked();
+	}
+
+	size_t bytes_to_read = data_.size();
+	strncpy(buf, data_.c_str(), bytes_to_read);
+	data_.erase(0, bytes_to_read);
+	bytes_remaining_ -= bytes_to_read;
+	return bytes_to_read;
+}
+
 int QuicNormalStream::ReadAll(char* buf, int buf_len) {
 	size_t bytes_read = 0;
 	while (buf_len > 0) {
@@ -713,8 +772,9 @@ int QuicNormalStream::ReadAll(char* buf, int buf_len) {
 void QuicNormalStream::OnStreamFrame(const QuicStreamFrame& frame) {
 	ReliableQuicStream::OnStreamFrame(frame);
 
-	if (frame.fin) {
-		QuicNormalSession *cur_session = (QuicNormalSession*)session();
+	QuicNormalSession *cur_session = (QuicNormalSession*)session();
+
+	if (frame.fin || cur_session->fifo_session()) {
 		cur_session->AddRedableStream(this);
 	}
 }
@@ -738,7 +798,16 @@ void QuicNormalStream::WriteOrBufferData(
 	if (fin) {
 		CloseReadSideHack();
 	}
-	ReliableQuicStream::WriteOrBufferData(data, fin, ack_listener);
+
+	if (((QuicNormalSession*)session())->fifo_session()) {
+		// add data len at the beginning (4 bytes)
+		uint32_t data_len = data.size();
+		std::string data_copy = data.as_string();
+		data_copy.insert(0, (char*)&data_len, sizeof(data_len));
+		ReliableQuicStream::WriteOrBufferData(data_copy, fin, ack_listener);
+	} else {
+		ReliableQuicStream::WriteOrBufferData(data, fin, ack_listener);
+	}
 }
 
 }  // namespace net

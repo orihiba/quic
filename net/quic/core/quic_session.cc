@@ -821,7 +821,8 @@ void QuicSession::UnregisterStream(QuicStreamId stream_id)
 // -----
 
 QuicNormalSession::QuicNormalSession(QuicConnection* connection, const QuicConfig& config)
-	: QuicSession(connection, config) {}
+	: QuicSession(connection, config),
+	fifo_session_(true) {} // default value. will be overrided
 
 QuicNormalSession::~QuicNormalSession() {
 	
@@ -859,15 +860,22 @@ int QuicNormalSession::ReadData(char *buffer, size_t len)
 	ReadableStreamMap::iterator it = readable_stream_map_.begin();
 	QuicNormalStream *stream = (QuicNormalStream*)it->second;
 
-	// check if all data arrived
-	if (stream->fin_received()) {
-		return stream->Read(buffer, len);
+	if (fifo_session_) {
+		if (stream->HasBytesToRead() || (stream->data().size() >= stream->bytes_remaining()) || (stream->data().size() >= len)) {
+			return stream->ReadFifo(buffer, len);
+		}
+	} else { // non fifo
+		if (stream->fin_received()) {
+			return stream->Read(buffer, len);
+		}
 	}
+
 	return 0;
 }
 
 void QuicNormalSession::AddRedableStream(QuicNormalStream *stream)
 {
+	// might add stream twice, nothing will happen
 	readable_stream_map_[stream->id()] = stream;
 }
 

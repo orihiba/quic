@@ -323,6 +323,8 @@ const std::list<ParityPacket *> QuicFecGroup::getRedundancyPackets() {
 		data_ptrs[i] = data + i * block_bytes;
 	}
 
+	// TODO HIBA - delete parity_sent_packets_?
+
 	// erasures_count = min(recovery_block_count_, block_count);
 	erasure_count_ = recovery_block_count_;;
 	if (block_count_ < erasure_count_)

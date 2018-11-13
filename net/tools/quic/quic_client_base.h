@@ -517,7 +517,8 @@ public:
 		const QuicConfig& config,
 		QuicConnectionHelperInterface* helper,
 		QuicAlarmFactory* alarm_factory,
-		std::unique_ptr<ProofVerifier> proof_verifier);
+		std::unique_ptr<ProofVerifier> proof_verifier,
+		bool is_fifo);
 
 	~QuicNormalClientBase() override;
 
@@ -908,6 +909,8 @@ private:
 
 	std::unique_ptr<ClientQuicDataToResend> push_promise_data_to_resend_;
 	size_t wanted_active_requests_;
+
+	bool is_fifo_;
 
 	DISALLOW_COPY_AND_ASSIGN(QuicNormalClientBase);
 };
