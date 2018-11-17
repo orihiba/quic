@@ -2330,7 +2330,7 @@ void QuicConnection::MaybeProcessRevivedPacket() {
 	if (!connected_ || group == nullptr || !group->CanRevive()) {
 		return;
 	}
-	std::list<ParityPacket> revived_packets = group->getRevivedPackets();
+	std::list<ParityPacket *> revived_packets = group->getRevivedPackets();
 
 	// Close this FEC group because all packets in the group has been received.
 	//last_decrypted_packet_level_ = group->EffectiveEncryptionLevel();
@@ -2340,12 +2340,12 @@ void QuicConnection::MaybeProcessRevivedPacket() {
 	group = nullptr;
 	group_map_.erase(last_header_.fec_group);
 
-	std::list<ParityPacket>::const_iterator it;
+	std::list<ParityPacket *>::const_iterator it;
 	for (it = revived_packets.begin(); it != revived_packets.end(); ++it)
 	{
 		QuicPacketHeader revived_header;
 
-		revived_header.packet_number = it->packet_number;
+		revived_header.packet_number = (*it)->packet_number;
 		revived_header.entropy_flag = false;  // Unknown entropy.
 		
 		if (!received_packet_manager_.IsAwaitingPacket(
@@ -2356,13 +2356,13 @@ void QuicConnection::MaybeProcessRevivedPacket() {
 		revived_header.public_header.connection_id_length = last_header_.public_header.connection_id_length;
 		revived_header.public_header.version_flag = false;
 		revived_header.public_header.reset_flag = false;
-		revived_header.public_header.packet_number_length = it->packet_number_len;
-        DVLOG(1) << "revived packet number " << it->packet_number << " has number len: " << it->packet_number_len;
+		revived_header.public_header.packet_number_length = (*it)->packet_number_len;
+        DVLOG(1) << "revived packet number " << (*it)->packet_number << " has number len: " << (*it)->packet_number_len;
 
 		revived_header.fec_flag = false;
 		revived_header.is_in_fec_group = NOT_IN_FEC_GROUP;
 		revived_header.fec_group = last_header_.fec_group;
-		revived_header.packet_number = it->packet_number;
+		revived_header.packet_number = (*it)->packet_number;
 
 		last_packet_revived_ = true;
 	//	if (debug_visitor_ != nullptr) {
@@ -2371,7 +2371,8 @@ void QuicConnection::MaybeProcessRevivedPacket() {
 	//	}
 
 		++stats_.packets_revived;
-		framer_.ProcessRevivedPacket(&revived_header, it->packet_data);
+		framer_.ProcessRevivedPacket(&revived_header, (*it)->packet_data);
+		delete *it;
 	}
 }
 

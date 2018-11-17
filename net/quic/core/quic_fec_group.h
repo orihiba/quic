@@ -29,7 +29,8 @@ public:
 	QuicPacketNumber packet_number;
 	std::string packet_data;
 	QuicPacketNumberLength packet_number_len;
-	ParityPacket(QuicPacketNumber packet_number_, StringPiece packet_data_, QuicPacketNumberLength packet_number_len_) : packet_number(packet_number_), packet_data(packet_data_.as_string()), packet_number_len(packet_number_len_) { } // error!! should copythe string
+	ParityPacket(QuicPacketNumber packet_number_, std::string packet_data_, QuicPacketNumberLength packet_number_len_) : packet_number(packet_number_), packet_data(packet_data_), packet_number_len(packet_number_len_) { }
+	~ParityPacket() = default;
 };
 
 class NET_EXPORT_PRIVATE QuicFecGroup {
@@ -54,7 +55,7 @@ class NET_EXPORT_PRIVATE QuicFecGroup {
   bool CanRevive() const ;
   bool IsFinished() const ;
   // revives all lost packets and returns them
-  std::list<ParityPacket> getRevivedPackets();
+  std::list<ParityPacket *> getRevivedPackets();
   size_t Revive(QuicPacketHeader* header,
                 char* decrypted_payload,
                 size_t decrypted_payload_len) ;

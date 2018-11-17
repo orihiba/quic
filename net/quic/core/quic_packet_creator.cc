@@ -946,6 +946,8 @@ void QuicPacketCreator::SerializeFec() {
 			kOffset, false, false, &frame);
 		size_t bytes_consumed = frame.stream_frame->data_length;
 		creator_.Flush();*/
+
+		delete *it;
 	}
 	fec_group_.reset(nullptr); 
 	packet_size_ = 0;

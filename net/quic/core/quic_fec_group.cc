@@ -70,10 +70,16 @@ QuicFecGroup::QuicFecGroup(QuicPacketNumber fec_group_number, FecConfiguration f
 	DVLOG(1) << "Created fec group with k=" << k << "and m=" << recovery_block_count_;
 }
 
-QuicFecGroup::~QuicFecGroup() {}
+QuicFecGroup::~QuicFecGroup() 
+{
+	std::list<ParityPacket *>::const_iterator it;
+	for (it = parity_sent_packets_.begin(); it != parity_sent_packets_.end(); ++it) {
+		delete *it; // class the std::string dtor
+	}
+}
 
 // appends the length of the original packet to the beginning of the packet, so we can remove the padding when getting the fixed size packet at the reviving stage
-StringPiece * appendLenToPayload(StringPiece payload, QuicPacketNumberLength packet_number_len)
+std::string * appendLenToPayload(StringPiece payload, QuicPacketNumberLength packet_number_len)
 {
 	unsigned short payload_len = payload.size();
 	
@@ -84,7 +90,7 @@ StringPiece * appendLenToPayload(StringPiece payload, QuicPacketNumberLength pac
 	memcpy(payload_with_len, (char*)(&ext_payload_len), 2);
 	memcpy(payload_with_len + 2, payload.as_string().c_str(), payload_len);
 
-	return new StringPiece(payload_with_len, payload_len + 2);
+	return new std::string(payload_with_len, payload_len + 2);
 }
 
 
@@ -96,7 +102,7 @@ bool QuicFecGroup::UpdateSentList(EncryptionLevel encryption_level,
 	DCHECK_NE(kInvalidPacketNumber, header.packet_number);
 	
 	// add the packet size to the beginning of the packet, and add it to the list
-	ParityPacket * packet = new ParityPacket(header.packet_number, *appendLenToPayload(decrypted_payload, header.public_header.packet_number_length), header.public_header.packet_number_length);
+	ParityPacket * packet = new ParityPacket(header.packet_number, std::move(*appendLenToPayload(decrypted_payload, header.public_header.packet_number_length)), header.public_header.packet_number_length);
 	parity_sent_packets_.push_back(packet);
 	DVLOG(1) << "Sending! Saving packet number " << header.packet_number;
 
@@ -135,12 +141,12 @@ bool QuicFecGroup::UpdateReceivedList(EncryptionLevel encryption_level,
     return false;
   }
 
-  StringPiece payloadToSave(decrypted_payload);
+  std::string payloadToSave = decrypted_payload.as_string();
   if (!is_fec_data)
   {
 	  payloadToSave = *appendLenToPayload(payloadToSave, header.public_header.packet_number_length);
   }
-  ParityPacket * packet = new ParityPacket(header.packet_number, payloadToSave, header.public_header.packet_number_length);
+  ParityPacket * packet = new ParityPacket(header.packet_number, std::move(payloadToSave), header.public_header.packet_number_length);
   parity_received_packets_.push_back(packet);
   DVLOG(1) << "Received! Saving packet number " << header.packet_number;
   
@@ -187,9 +193,9 @@ unsigned char * QuicFecGroup::getBlockData(unsigned int row_number, Block * bloc
 	return nullptr;
 }
 
-std::list<ParityPacket> QuicFecGroup::getRevivedPackets()
+std::list<ParityPacket *> QuicFecGroup::getRevivedPackets()
 {
-	std::list<ParityPacket> revived_packets;
+	std::list<ParityPacket *> revived_packets;
 
 	if (!CanRevive()) {
 		return revived_packets;
@@ -225,7 +231,7 @@ std::list<ParityPacket> QuicFecGroup::getRevivedPackets()
 
 		blocks[i].data = new unsigned char[block_bytes];
 		memset(blocks[i].data, 0, block_bytes);
-		memcpy(blocks[i].data, (unsigned char*)(*it)->packet_data.c_str(), (*it)->packet_data.size()); 
+		memcpy(blocks[i].data, (unsigned char*)(*it)->packet_data.c_str(), (*it)->packet_data.size());
 		blocks[i].row = (*it)->packet_number - min_protected_packet_; 
 	}
 	
@@ -245,7 +251,7 @@ std::list<ParityPacket> QuicFecGroup::getRevivedPackets()
 		unsigned short packet_number_len = len >> 14;
 		len &= 0x3fff;
 
-		revived_packets.push_back(ParityPacket(*it, StringPiece((char *)payload + 2, len).as_string(), (QuicPacketNumberLength)packet_number_len));
+		revived_packets.push_back(new ParityPacket(*it, StringPiece((char *)payload + 2, len).as_string(), (QuicPacketNumberLength)packet_number_len));
 	}
 
 	return revived_packets;
@@ -323,8 +329,6 @@ const std::list<ParityPacket *> QuicFecGroup::getRedundancyPackets() {
 		data_ptrs[i] = data + i * block_bytes;
 	}
 
-	// TODO HIBA - delete parity_sent_packets_?
-
 	// erasures_count = min(recovery_block_count_, block_count);
 	erasure_count_ = recovery_block_count_;;
 	if (block_count_ < erasure_count_)
@@ -340,7 +344,7 @@ const std::list<ParityPacket *> QuicFecGroup::getRedundancyPackets() {
 	for (size_t i = 0; i < recovery_block_count_; ++i)
 	{
 		size_t erasure_index = recovery_block_count_ - i - 1;
-		payloads.push_back(new ParityPacket((QuicPacketNumber)(min_protected_packet_ + block_count_ + erasure_index), StringPiece((char*)(recovery_blocks + erasure_index * block_bytes), block_bytes), PACKET_1BYTE_PACKET_NUMBER)); // packet number len is not used
+		payloads.push_back(new ParityPacket((QuicPacketNumber)(min_protected_packet_ + block_count_ + erasure_index), std::move(std::string((char*)(recovery_blocks + erasure_index * block_bytes), block_bytes)), PACKET_1BYTE_PACKET_NUMBER)); // packet number len is not used
 	}
 
 	return payloads;
