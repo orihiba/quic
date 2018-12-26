@@ -859,6 +859,7 @@ bool QuicFramer::AppendPacketHeader(const QuicPacketHeader& header,
 	  private_flags |= PACKET_PRIVATE_FLAGS_FEC;
   }
 
+  VLOG(2) << "built private_flags: " << (int)private_flags << std::endl;
 
   if (!writer->WriteUInt8(private_flags)) {
 	  return false;
@@ -878,6 +879,7 @@ bool QuicFramer::AppendPacketHeader(const QuicPacketHeader& header,
 	  if (!writer->WriteBytes(&first_fec_protected_packet_offset, 1)) {
 		  return false;
 	  }
+	  VLOG(2) << "first_fec_protected_packet_offset: " << first_fec_protected_packet_offset << std::endl;
   }
 
   if (quic_version_ > QUIC_VERSION_33) {
@@ -1226,6 +1228,8 @@ bool QuicFramer::ProcessAuthenticatedHeader(QuicDataReader* reader,
   //  set_detailed_error("Illegal private flags value.");
   //  return RaiseError(QUIC_INVALID_PACKET_HEADER);
   //}
+
+  DVLOG(2) << "private flags:" << private_flags << std::endl;
 
   header->entropy_flag = (private_flags & PACKET_PRIVATE_FLAGS_ENTROPY) != 0;
   header->fec_flag = (private_flags & PACKET_PRIVATE_FLAGS_FEC) != 0;

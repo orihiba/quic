@@ -91,7 +91,7 @@ bool MyDecrypter::DecryptPacket(QuicPathId path_id,
                                       size_t max_output_length) {
   
   DVLOG(1) << "decrypting!";
-  DVLOG(1) << QuicUtils::HexDump(ciphertext);
+ // DVLOG(1) << QuicUtils::HexDump(ciphertext);
   memcpy(output, ciphertext.data(), ciphertext.size());
   *output_length = ciphertext.size();
 

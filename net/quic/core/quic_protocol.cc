@@ -22,7 +22,7 @@ const char* const kFinalOffsetHeaderKey = ":final-offset";
 // default values
 size_t kDefaultMaxPacketsPerFecGroup = 20;  // default k=20
 size_t kDefaultRecoveryBlocksCount = 10;	// default m=10
-FecConfiguration current_fec_configuration = FEC_100_5; // defualt 100:5
+FecConfiguration current_fec_configuration = FEC_OFF; // defualt
 bool useFec = false;
 bool useRetransmission = true;
 
@@ -31,7 +31,7 @@ void initFec()
 	base::CommandLine* command_line = base::CommandLine::ForCurrentProcess();
 	if (command_line->HasSwitch("fec"))
 	{
-		useFec = true;
+		//useFec = true;
 		if (command_line->HasSwitch("k") && command_line->HasSwitch("m"))
 		{
 			int temp = 0;

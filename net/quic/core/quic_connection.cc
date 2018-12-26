@@ -829,6 +829,8 @@ void QuicConnection::UpdateFecCofiguration(QuicPacketCount packets_received)
 	switch (loss_rate_group) {
 	case 0:
 	case 1:
+		current_fec_configuration = FEC_OFF;
+		break;
 	case 2:
 		current_fec_configuration = FEC_100_5;
 		break;
@@ -846,6 +848,12 @@ void QuicConnection::UpdateFecCofiguration(QuicPacketCount packets_received)
 		break;
 	}
 	
+	if (current_fec_configuration == FEC_OFF) {
+		useFec = false;
+	} else {
+		useFec = true;
+	}
+	DVLOG(1) << "current_fec_configuration: " << current_fec_configuration;
 }
 
 bool QuicConnection::OnAckFrame(const QuicAckFrame& incoming_ack) {

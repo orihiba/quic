@@ -66,7 +66,7 @@ bool QuicDataReader::ReadStringPiece16(StringPiece* result) {
     // OnFailure() already called.
     return false;
   }
-
+  DVLOG(1) << "result_len " << result_len << std::endl;
   return ReadStringPiece(result, result_len);
 }
 

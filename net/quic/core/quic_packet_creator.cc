@@ -58,7 +58,7 @@ QuicPacketCreator::QuicPacketCreator(QuicConnectionId connection_id,
 		false,
 		false),
 	  should_fec_protect_next_packet_(false),
-	  fec_protect_(true),
+	  fec_protect_(false),
 	  //max_packets_per_fec_group_(kDefaultMaxPacketsPerFecGroup),
      
 	fec_timeout_(QuicTime::Delta::Zero())
@@ -147,6 +147,8 @@ void QuicPacketCreator::StartFecProtectingPackets() {
 	}
 	DCHECK(!fec_protect_);
 	fec_protect_ = true;
+
+	DVLOG(1) << "FEC protection is ON";
 }
 
 void QuicPacketCreator::StopFecProtectingPackets() {
@@ -156,6 +158,8 @@ void QuicPacketCreator::StopFecProtectingPackets() {
 	}
 	DCHECK(fec_protect_);
 	fec_protect_ = false;
+
+	DVLOG(1) << "FEC protection is OFF";
 }
 
 bool QuicPacketCreator::IsFecProtected() const {
@@ -180,6 +184,8 @@ InFecGroup QuicPacketCreator::MaybeUpdateLengthsAndStartFec() {
 	// Update packet number length only on packet and FEC group boundaries. -- causes bugs
 	//packet_.packet_number_length = next_packet_number_length_;
 	if (!fec_protect_) {
+		DVLOG(1) << "Reseting fec group";
+		fec_group_.reset(nullptr);
 		return NOT_IN_FEC_GROUP;
 	}
 	// Start a new FEC group since protection is on. Set the fec group number to
@@ -466,7 +472,7 @@ void QuicPacketCreator::ReserializeAllFrames(
   // if we haven't gone forward secure.
   if (retransmission.has_crypto_handshake ||
       packet_.encryption_level != ENCRYPTION_FORWARD_SECURE) {
-    packet_.encryption_level = retransmission.encryption_level;
+    //packet_.encryption_level = retransmission.encryption_level; // TODO
   }
 
   // Serialize the packet and restore packet number length state.
@@ -502,6 +508,12 @@ void QuicPacketCreator::Flush() {
 }
 
 void QuicPacketCreator::OnSerializedPacket(bool is_fec_packet) {
+
+	DVLOG(2) << "Sending packet number " << packet_.packet_number << std::endl <<
+	QuicUtils::HexDump(
+		StringPiece(packet_.encrypted_buffer, packet_.encrypted_length)) << std::endl;
+
+	
   if (packet_.encrypted_buffer == nullptr) {
     const string error_details = "Failed to SerializePacket.";
     QUIC_BUG << error_details;
@@ -760,8 +772,13 @@ void QuicPacketCreator::FillPacketHeader(bool fec_flag,
   header->fec_flag = fec_flag;
   header->is_in_fec_group = fec_group == 0 ? NOT_IN_FEC_GROUP : IN_FEC_GROUP;
   header->fec_group = fec_group;
-  header->fec_configuration = fec_group_ != nullptr ? fec_group_->fec_configuration : FEC_100_5; // put default. not used
+  header->fec_configuration = fec_group_ != nullptr ? fec_group_->fec_configuration : FEC_OFF;
 
+  DVLOG(1) << "packet number " << header->packet_number << std::endl
+	<< 	  "fec_flag " << header->fec_flag << std::endl
+	  << "is_in_fec_group " << header->is_in_fec_group << std::endl
+		<<  "fec_group " << header->fec_group << std::endl
+		<<  "fec_configuration " << header->fec_configuration << std::endl;
 }
 
 bool QuicPacketCreator::ShouldRetransmit(const QuicFrame& frame) {
@@ -897,7 +914,7 @@ bool QuicPacketCreator::QuicRandomBoolSource::RandBool() {
 }
 
 void QuicPacketCreator::SerializeFec() {
-	if (fec_group_.get() == nullptr || fec_group_->NumSentPackets() <= 0) {
+	if (fec_group_.get() == nullptr || fec_group_->NumSentPackets() <= 0 || fec_group_->fec_configuration == FEC_OFF) {
 		QUIC_BUG << "SerializeFEC called but no group or zero packets in group.";
 		return;
 	}

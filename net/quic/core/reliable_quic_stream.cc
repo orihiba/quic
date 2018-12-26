@@ -319,7 +319,7 @@ QuicConsumedData ReliableQuicStream::WritevData(
     DVLOG(1) << "stream " << id() << " shortens write length to "
              << write_length << " due to flow control";
   }
-
+  DVLOG(1) << "stream id " << id();
   QuicConsumedData consumed_data =
       WritevDataInner(QuicIOVector(iov, iov_count, write_length),
                       stream_bytes_written_, fin, ack_listener);

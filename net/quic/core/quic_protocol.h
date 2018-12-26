@@ -63,6 +63,7 @@ typedef std::list<QuicPacketNumber> PacketNumberList;
 
 ////////////// FEC ////////////////////
 enum FecConfiguration {
+	FEC_OFF,	// 0%
 	FEC_100_5, // 5 %
 	FEC_50_5, // 7.5 %
 	FEC_20_5, // 10 %

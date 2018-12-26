@@ -133,7 +133,7 @@ class StatelessConnectionTerminator {
       UniqueStreamBuffer data;
       if (!creator_.ConsumeData(kCryptoStreamId, iov, offset, offset,
                                 /*fin=*/false,
-                                /*needs_full_padding=*/true, &frame, MAY_FEC_PROTECT)) { // HIBA here withput fec
+                                /*needs_full_padding=*/true, &frame, MAY_FEC_PROTECT)) { // HIBA here without fec
         QUIC_BUG << "Unable to consume data into an empty packet.";
         return;
       }
@@ -1003,7 +1003,7 @@ public:
 			UniqueStreamBuffer data;
 			if (!creator_.ConsumeData(kCryptoStreamId, iov, offset, offset,
 				/*fin=*/false,
-				/*needs_full_padding=*/true, &frame, MAY_FEC_PROTECT)) { // HIBA here withput fec
+				/*needs_full_padding=*/true, &frame, MAY_FEC_PROTECT)) { // HIBA here without fec
 				QUIC_BUG << "Unable to consume data into an empty packet.";
 				return;
 			}
