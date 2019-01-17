@@ -210,6 +210,8 @@ class NET_EXPORT_PRIVATE QuicSentPacketManager
 
   void OnApplicationLimited() override;
 
+  QuicPacketNumber GetLargestNewlyAcked() const override { return largest_newly_acked_; }
+
  private:
   friend class test::QuicConnectionPeer;
   friend class test::QuicSentPacketManagerPeer;

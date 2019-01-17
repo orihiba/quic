@@ -103,7 +103,7 @@ int main(int argc, char* argv[]) {
   settings.logging_dest = logging::LOG_TO_SYSTEM_DEBUG_LOG;
   CHECK(logging::InitLogging(settings));
 
-  server2();
+  //server2();
 
   base::AtExitManager exit_manager;
   base::MessageLoopForIO message_loop;

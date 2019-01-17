@@ -188,7 +188,7 @@ int main(int argc, char* argv[]) {
   settings.logging_dest = logging::LOG_TO_SYSTEM_DEBUG_LOG;
   CHECK(logging::InitLogging(settings));
 
-  client2();
+  //client2();
 
 
   if (line->HasSwitch("h") || line->HasSwitch("help") || urls.empty()) {

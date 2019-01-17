@@ -777,7 +777,9 @@ bool QuicConnection::OnStreamFrame(const QuicStreamFrame& frame) {
 
 void QuicConnection::UpdateFecCofiguration(QuicPacketCount packets_received)
 {
-	QuicPacketCount packets_sent = sent_packet_manager_->getStats()->packets_sent;
+	QuicPacketNumber highest_acked = sent_packet_manager_->GetLargestNewlyAcked();
+
+	QuicPacketCount packets_sent = highest_acked;//sent_packet_manager_->getStats()->packets_sent;
 	QuicPacketCount last_total_packets_received = packets_received_heigher_bytes + last_packets_received;
 
 	// overflow
@@ -797,11 +799,11 @@ void QuicConnection::UpdateFecCofiguration(QuicPacketCount packets_received)
 	DVLOG(1) << "packets_received_delta:" << packets_received_delta;
 	DVLOG(1) << "packets_sent_delta:" << packets_sent_delta;
 
-	if ((packets_sent_delta == 0) || (packets_received_delta >= packets_sent_delta)) {
-		// not updating last items, so next sample will handle those values
-		DVLOG(1) << "packets_sent_delta is 0. doing nothing";
-		return;
-	}
+	//if ((packets_sent_delta == 0) || (packets_received_delta >= packets_sent_delta)) {
+	//	// not updating last items, so next sample will handle those values
+	//	DVLOG(1) << "packets_sent_delta is 0. doing nothing";
+	//	return;
+	//}
 	QuicPacketCount curr_total_packet_deltas = packets_sent_delta + packets_received_delta;
 
 	packet_deltas.push_back(curr_total_packet_deltas);
@@ -825,27 +827,33 @@ void QuicConnection::UpdateFecCofiguration(QuicPacketCount packets_received)
 	last_packets_sent = packets_sent;
 	last_packets_received = packets_received;
 
-	int loss_rate_group = (total_loss_rate * 100) / 2.5;
-	switch (loss_rate_group) {
-	case 0:
-	case 1:
+	if (total_loss_rate < 0) {
 		current_fec_configuration = FEC_OFF;
-		break;
-	case 2:
-		current_fec_configuration = FEC_100_5;
-		break;
-	case 3:
-		current_fec_configuration = FEC_50_5;
-		break;
-	case 4:
-		current_fec_configuration = FEC_20_5;
-		break;
-	case 5:
-		current_fec_configuration = FEC_15_5;
-		break;
-	default: // high loss rate
-		current_fec_configuration = FEC_10_5;
-		break;
+	}
+	else {
+
+		int loss_rate_group = (total_loss_rate * 100) / 2.5;
+		switch (loss_rate_group) {
+		case 0:
+		case 1:
+			current_fec_configuration = FEC_OFF;
+			break;
+		case 2:
+			current_fec_configuration = FEC_100_5;
+			break;
+		case 3:
+			current_fec_configuration = FEC_50_5;
+			break;
+		case 4:
+			current_fec_configuration = FEC_20_5;
+			break;
+		case 5:
+			current_fec_configuration = FEC_15_5;
+			break;
+		default: // high loss rate
+			current_fec_configuration = FEC_10_5;
+			break;
+		}
 	}
 	
 	if (current_fec_configuration == FEC_OFF) {
@@ -1513,21 +1521,24 @@ const QuicConnectionStats& QuicConnection::GetStats() {
 void QuicConnection::ProcessUdpPacket(const IPEndPoint& self_address,
                                       const IPEndPoint& peer_address,
                                       const QuicReceivedPacket& packet) {
-	//static int number_of_packets = 1;
+	static int number_of_packets = 1;
 	idle_timeout_alarm_->Update(clock_->ApproximateNow() + new_idle_network_timeout_, QuicTime::Delta::Zero());
 
   if (!connected_) {
     return;
   }
-  if (perspective_ == Perspective::IS_SERVER) {
+#define LOSS
+#ifdef LOSS
+  if (perspective_ == Perspective::IS_CLIENT) {
 	//  if (number_of_packets++ == 4) { return; }
-	 //if (/*(number_of_packets >= 3 && number_of_packets <= 5) ||*/ (number_of_packets >= 7 && number_of_packets <= 10)/* || (number_of_packets >= 65 && number_of_packets <= 66)*/ /*|| (number_of_packets >= 29 && number_of_packets <= 33) || (number_of_packets >= 36 && number_of_packets <= 40)*/)
-	 //{
-	  // number_of_packets++;
-		//  return;
-	 //}
-	 //number_of_packets++;
+	 if (/*(number_of_packets >= 3 && number_of_packets <= 5) ||*/ (number_of_packets >= 60 && number_of_packets <= 70)/* || (number_of_packets >= 65 && number_of_packets <= 66)*/ /*|| (number_of_packets >= 29 && number_of_packets <= 33) || (number_of_packets >= 36 && number_of_packets <= 40)*/)
+	 {
+	   number_of_packets++;
+		  return;
+	 }
+	 number_of_packets++;
   }
+#endif
 
   if (debug_visitor_ != nullptr) {
     debug_visitor_->OnPacketReceived(self_address, peer_address, packet);
