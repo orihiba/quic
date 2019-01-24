@@ -722,7 +722,13 @@ bool QuicNormalClientBase::EncryptionBeingEstablished() {
 		session_->connection()->connected();
 }
 
-void QuicNormalClientBase::WriteOrBufferData(base::StringPiece data,
+void QuicNormalClientBase::WriteOrBufferData(const char *raw_data, size_t len,
+	bool fin)
+{
+	WriteOrBufferData(StringPiece(raw_data, len), fin);
+}
+
+void QuicNormalClientBase::WriteOrBufferData(StringPiece data,
 	bool fin)
 {
 	QuicNormalStream* stream = CreateReliableClientStream();

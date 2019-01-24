@@ -686,7 +686,7 @@ int QuicNormalStream::Read(char* buf, size_t buf_len)
 		sequencer()->SetUnblocked();
 	}
 
-	strncpy(buf, data.c_str(), data.size());
+	memcpy(buf, data.c_str(), data.size());
 	return data.size();
 }
 

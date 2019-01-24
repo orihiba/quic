@@ -475,8 +475,9 @@ int32_t QuicNormalServerSessionBase::BandwidthToCachedParameterBytesPerSecond(
 
 QuicNormalStream *last_stream = nullptr;
 
-void QuicNormalServerSessionBase::SendData(base::StringPiece data, bool last_message)
+void QuicNormalServerSessionBase::SendData(const char *raw_data, size_t len, bool end_of_message)
 {
+	base::StringPiece data(raw_data, len);
 	QuicNormalStream *stream;
 
 	if (last_stream != nullptr) {
@@ -491,11 +492,11 @@ void QuicNormalServerSessionBase::SendData(base::StringPiece data, bool last_mes
 		last_stream = stream;
 	}
 
-	if (last_message) {
+	if (end_of_message) {
 		last_stream = nullptr;
 	}
 
-	stream->WriteOrBufferData(data, last_message, nullptr);
+	stream->WriteOrBufferData(data, end_of_message, nullptr);
 }
 
 }  // namespace  

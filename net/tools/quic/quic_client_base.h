@@ -552,7 +552,10 @@ public:
 	//	base::StringPiece body,
 	//	bool fin);
 
-	void WriteOrBufferData(base::StringPiece data,
+	void WriteOrBufferData(const char *data, size_t len,
+		bool fin);
+	
+	void WriteOrBufferData(StringPiece data,
 		bool fin);
 
 	//// Sends an HTTP request and waits for response before returning.
