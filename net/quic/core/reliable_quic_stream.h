@@ -341,7 +341,7 @@ public:
 		DISALLOW_COPY_AND_ASSIGN(Visitor);
 	};
 
-	QuicNormalStream(QuicStreamId id, QuicSession* quic_session);
+	QuicNormalStream(QuicStreamId id, QuicSession* quic_session, size_t max_delay);
 	~QuicNormalStream() override;
 
 	QuicArenaScopedPtr<QuicAlarm> bounded_delay_alarm_;

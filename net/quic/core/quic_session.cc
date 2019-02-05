@@ -820,9 +820,10 @@ void QuicSession::UnregisterStream(QuicStreamId stream_id)
 
 // -----
 
-QuicNormalSession::QuicNormalSession(QuicConnection* connection, const QuicConfig& config)
+QuicNormalSession::QuicNormalSession(QuicConnection* connection, const QuicConfig& config, size_t max_delay)
 	: QuicSession(connection, config),
-	fifo_session_(true) {} // default value. will be overrided
+	fifo_session_(true),  // default value. will be overrided TODO HIBA
+	max_delay_(max_delay) {}
 
 QuicNormalSession::~QuicNormalSession() {
 	

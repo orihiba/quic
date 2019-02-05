@@ -106,7 +106,8 @@ public:
 		QuicConnection* connection,
 		const QuicServerId& server_id,
 		QuicCryptoClientConfig* crypto_config,
-		QuicClientPushPromiseIndex* push_promise_index);
+		QuicClientPushPromiseIndex* push_promise_index,
+		size_t max_delay);
 
 	~QuicNormalClientSession() override;
 

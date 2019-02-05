@@ -211,8 +211,9 @@ void QuicClientSessionBase::ResetPromised(QuicStreamId id,
 QuicNormalClientSessionBase::QuicNormalClientSessionBase(
 	QuicConnection* connection,
 	QuicClientPushPromiseIndex* push_promise_index,
-	const QuicConfig& config)
-	: QuicNormalSession(connection, config) {}
+	const QuicConfig& config,
+	size_t max_delay)
+	: QuicNormalSession(connection, config, max_delay) {}
 
 QuicNormalClientSessionBase::~QuicNormalClientSessionBase() {
 	delete connection();

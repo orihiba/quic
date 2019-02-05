@@ -165,7 +165,8 @@ public:
 		Visitor* visitor,
 		QuicCryptoServerStream::Helper* helper,
 		const QuicCryptoServerConfig* crypto_config,
-		QuicCompressedCertsCache* compressed_certs_cache);
+		QuicCompressedCertsCache* compressed_certs_cache,
+		size_t max_delay);
 
 	~QuicNormalServerSession() override;
 

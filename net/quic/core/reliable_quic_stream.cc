@@ -504,7 +504,7 @@ private:
 	DISALLOW_COPY_AND_ASSIGN(BoundedAlarmDelegate);
 };
 
-QuicNormalStream::QuicNormalStream(QuicStreamId id, QuicSession * quic_session)
+QuicNormalStream::QuicNormalStream(QuicStreamId id, QuicSession * quic_session, size_t max_delay)
 	: ReliableQuicStream(id, quic_session),
 	session_(quic_session),
 	visitor_(nullptr),
@@ -512,11 +512,13 @@ QuicNormalStream::QuicNormalStream(QuicStreamId id, QuicSession * quic_session)
 	arena_(),
 	bytes_remaining_(0) {
 
-	if (session_->IsIncomingStream(id)) {
-		bounded_delay_alarm_ = session_->connection()->alarm_factory()->CreateAlarm(
-			arena_.New<BoundedAlarmDelegate>(this),
-			&arena_);
-		bounded_delay_alarm_->Set(session_->connection()->clock()->ApproximateNow() + QuicTime::Delta::FromMilliseconds(100000));
+	if (max_delay != 0) {
+		if (!(session_->IsIncomingStream(id))) {
+			bounded_delay_alarm_ = session_->connection()->alarm_factory()->CreateAlarm(
+				arena_.New<BoundedAlarmDelegate>(this),
+				&arena_);
+			bounded_delay_alarm_->Set(session_->connection()->clock()->ApproximateNow() + QuicTime::Delta::FromMilliseconds(max_delay));
+		}
 	}
 
 	session_->RegisterStream(id);

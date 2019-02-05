@@ -118,13 +118,15 @@ public:
 		const QuicServerId& server_id,
 		const QuicVersionVector& supported_versions,
 		std::unique_ptr<ProofVerifier> proof_verifier,
-		bool is_fifo);
+		bool is_fifo,
+		size_t max_delay);
 	QuicNormalClient(IPEndPoint server_address,
 		const QuicServerId& server_id,
 		const QuicVersionVector& supported_versions,
 		const QuicConfig& config,
 		std::unique_ptr<ProofVerifier> proof_verifier,
-		bool is_fifo);
+		bool is_fifo,
+		size_t max_delay);
 
 	~QuicNormalClient() override;
 

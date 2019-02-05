@@ -212,7 +212,8 @@ QuicNormalServer::QuicNormalServer(
 	const QuicCryptoServerConfig::ConfigOptions& crypto_config_options,
 	const QuicVersionVector& supported_versions,
 	base::WaitableEvent *session_event,
-	bool is_fifo)
+	bool is_fifo,
+	size_t max_delay)
 	: version_manager_(supported_versions),
 	helper_(
 		new QuicChromiumConnectionHelper(&clock_, QuicRandom::GetInstance())),
@@ -230,7 +231,8 @@ QuicNormalServer::QuicNormalServer(
 	session_event_(session_event),
 	data_arr(),
 	weak_factory_(this),
-	is_fifo_(is_fifo) {
+	is_fifo_(is_fifo),
+	max_delay_(max_delay) {
 		data_event_ = new base::WaitableEvent(base::WaitableEvent::ResetPolicy::AUTOMATIC,
 			base::WaitableEvent::InitialState::NOT_SIGNALED);
 	Initialize();

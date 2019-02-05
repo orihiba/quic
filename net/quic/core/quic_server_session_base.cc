@@ -254,8 +254,9 @@ QuicNormalServerSessionBase::QuicNormalServerSessionBase(
 	Visitor* visitor,
 	QuicCryptoServerStream::Helper* helper,
 	const QuicCryptoServerConfig* crypto_config,
-	QuicCompressedCertsCache* compressed_certs_cache)
-	: QuicNormalSession(connection, config),
+	QuicCompressedCertsCache* compressed_certs_cache,
+	size_t max_delay)
+	: QuicNormalSession(connection, config, max_delay),
 	crypto_config_(crypto_config),
 	compressed_certs_cache_(compressed_certs_cache),
 	visitor_(visitor),

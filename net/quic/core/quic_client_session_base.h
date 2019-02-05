@@ -153,7 +153,8 @@ public:
 	// |promised_by_url|.
 	QuicNormalClientSessionBase(QuicConnection* connection,
 		QuicClientPushPromiseIndex* push_promise_index,
-		const QuicConfig& config);
+		const QuicConfig& config, 
+		size_t max_delay);
 
 	~QuicNormalClientSessionBase() override;
 

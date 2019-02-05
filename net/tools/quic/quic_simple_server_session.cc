@@ -214,13 +214,15 @@ QuicNormalServerSession::QuicNormalServerSession(
 	Visitor* visitor,
 	QuicCryptoServerStream::Helper* helper,
 	const QuicCryptoServerConfig* crypto_config,
-	QuicCompressedCertsCache* compressed_certs_cache)
+	QuicCompressedCertsCache* compressed_certs_cache,
+	size_t max_delay)
 	: QuicNormalServerSessionBase(config,
 		connection,
 		visitor,
 		helper,
 		crypto_config,
-		compressed_certs_cache), streams_to_reset_() {}
+		compressed_certs_cache, 
+		max_delay), streams_to_reset_() {}
 
 QuicNormalServerSession::~QuicNormalServerSession() {
 	delete connection();
@@ -275,7 +277,7 @@ QuicNormalStream* QuicNormalServerSession::CreateIncomingDynamicStream(
     return nullptr;
   }
 
-  QuicNormalStream* stream = new QuicNormalStream(id, this);
+  QuicNormalStream* stream = new QuicNormalStream(id, this, 0 /* incoming stream shouldn't have a bounded delay timer */);
   
   ActivateStream(stream);
   return stream;
@@ -287,7 +289,7 @@ QuicNormalStream* QuicNormalServerSession::CreateOutgoingDynamicStream(SpdyPrior
   }
 
   QuicNormalStream* stream =
-      new QuicNormalStream(GetNextOutgoingStreamId(), this);
+      new QuicNormalStream(GetNextOutgoingStreamId(), this, max_delay_);
   ActivateStream(stream);
   return stream;
 }
@@ -296,6 +298,11 @@ void QuicNormalServerSession::CloseStreamInner(QuicStreamId stream_id,
 	bool locally_reset) {
 
 	auto stream = GetOrCreateDynamicStream(stream_id);
+	if (stream == nullptr) {
+		// stream is already closed
+		return;
+	}
+
 	stream->set_rst_sent(true); // mark as done
 	QuicNormalSession::CloseStreamInner(stream_id, locally_reset);
 

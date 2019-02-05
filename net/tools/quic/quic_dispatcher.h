@@ -503,6 +503,7 @@ public:
 	// Return true if there is CHLO buffered.
 	virtual bool HasChlosBuffered() const;
 
+	QuicNormalServer* server() { return server_; }
 protected:
 	virtual QuicNormalServerSessionBase* CreateQuicSession(
 		QuicConnectionId connection_id,

@@ -185,13 +185,15 @@ QuicNormalClient::QuicNormalClient(
 	const QuicServerId& server_id,
 	const QuicVersionVector& supported_versions,
 	std::unique_ptr<ProofVerifier> proof_verifier,
-	bool is_fifo)
+	bool is_fifo,
+	size_t max_delay)
 	: QuicNormalClient(server_address,
 		server_id,
 		supported_versions,
 		QuicConfig(),
 		std::move(proof_verifier),
-		is_fifo) {}
+		is_fifo,
+		max_delay) {}
 
 QuicNormalClient::QuicNormalClient(
 	IPEndPoint server_address,
@@ -199,14 +201,16 @@ QuicNormalClient::QuicNormalClient(
 	const QuicVersionVector& supported_versions,
 	const QuicConfig& config,
 	std::unique_ptr<ProofVerifier> proof_verifier,
-	bool is_fifo)
+	bool is_fifo,
+	size_t max_delay)
 	: QuicNormalClientBase(server_id,
 		supported_versions,
 		config,
 		CreateQuicConnectionHelper(),
 		CreateQuicAlarmFactory(),
 		std::move(proof_verifier),
-		is_fifo),
+		is_fifo,
+		max_delay),
 	initialized_(false),
 	packet_reader_started_(false),
 	weak_factory_(this) {

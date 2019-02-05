@@ -139,10 +139,11 @@ QuicNormalClientSession::QuicNormalClientSession(
 	QuicConnection* connection,
 	const QuicServerId& server_id,
 	QuicCryptoClientConfig* crypto_config,
-	QuicClientPushPromiseIndex* push_promise_index) // not needed
-	: QuicNormalClientSessionBase(connection, push_promise_index, config),
+	QuicClientPushPromiseIndex* push_promise_index,  // not needed
+	size_t max_delay)
+	: QuicNormalClientSessionBase(connection, push_promise_index, config, max_delay),
 	server_id_(server_id),
-	crypto_config_(crypto_config){}
+	crypto_config_(crypto_config) {}
 
 QuicNormalClientSession::~QuicNormalClientSession() {}
 
@@ -185,7 +186,7 @@ QuicNormalStream* QuicNormalClientSession::CreateOutgoingDynamicStream(SpdyPrior
 }
 
 QuicNormalStream* QuicNormalClientSession::CreateClientStream() {
-	return new QuicNormalStream(GetNextOutgoingStreamId(), this);
+	return new QuicNormalStream(GetNextOutgoingStreamId(), this, max_delay_);
 }
 
 QuicCryptoClientStreamBase* QuicNormalClientSession::GetCryptoStream() {
@@ -230,7 +231,7 @@ QuicNormalStream* QuicNormalClientSession::CreateIncomingDynamicStream(
 	if (!ShouldCreateIncomingDynamicStream(id)) {
 		return nullptr;
 	}
-	QuicNormalStream* stream = new QuicNormalStream(id, this);
+	QuicNormalStream* stream = new QuicNormalStream(id, this, 0 /* incoming stream shouldn't have a bounded delay timer */);
 	stream->CloseWriteSide();
 	ActivateStream(stream);
 	return stream;

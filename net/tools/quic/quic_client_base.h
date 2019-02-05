@@ -518,7 +518,8 @@ public:
 		QuicConnectionHelperInterface* helper,
 		QuicAlarmFactory* alarm_factory,
 		std::unique_ptr<ProofVerifier> proof_verifier,
-		bool is_fifo);
+		bool is_fifo,
+		size_t max_delay);
 
 	~QuicNormalClientBase() override;
 
@@ -914,6 +915,7 @@ private:
 	size_t wanted_active_requests_;
 
 	bool is_fifo_;
+	size_t max_delay_;
 
 	DISALLOW_COPY_AND_ASSIGN(QuicNormalClientBase);
 };

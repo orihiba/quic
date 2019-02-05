@@ -77,7 +77,7 @@ QuicNormalServerSessionBase* QuicNormalDispatcher::CreateQuicSession(
 
 	QuicNormalServerSessionBase* session =
 		new QuicNormalServerSession(config(), connection, this, session_helper(),
-			crypto_config(), compressed_certs_cache());
+			crypto_config(), compressed_certs_cache(), server()->max_delay());
 	session->Initialize();
 	return session;
 }

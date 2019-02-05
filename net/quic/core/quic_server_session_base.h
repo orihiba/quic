@@ -202,7 +202,8 @@ public:
 		Visitor* visitor,
 		QuicCryptoServerStream::Helper* helper,
 		const QuicCryptoServerConfig* crypto_config,
-		QuicCompressedCertsCache* compressed_certs_cache);
+		QuicCompressedCertsCache* compressed_certs_cache,
+		size_t max_delay);
 
 	// Override the base class to notify the owner of the connection close.
 	void OnConnectionClosed(QuicErrorCode error,

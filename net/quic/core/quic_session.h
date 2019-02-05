@@ -427,7 +427,7 @@ class NET_EXPORT_PRIVATE QuicSession : public QuicConnectionVisitorInterface {
 class NET_EXPORT_PRIVATE QuicNormalSession : public QuicSession
 {
 public:
-	QuicNormalSession(QuicConnection* connection, const QuicConfig& config);
+	QuicNormalSession(QuicConnection* connection, const QuicConfig& config, size_t max_delay);
 	~QuicNormalSession() override;
 	virtual void OnDataAvailable();
 	void OnStreamFrame(const QuicStreamFrame& frame) override;
@@ -444,10 +444,16 @@ public:
 		fifo_session_ = is_fifo;
 	}
 
+	void SetMaxDelay(size_t max_delay) {
+		max_delay_ = max_delay;
+	}
+
 	bool fifo_session() { return fifo_session_; }
 
 private:
 	bool fifo_session_;
+protected:
+	size_t max_delay_;
 };
 }  // namespace net
 
