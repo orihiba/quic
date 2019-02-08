@@ -860,6 +860,9 @@ int QuicNormalSession::ReadData(char *buffer, size_t len)
 	}
 	ReadableStreamMap::iterator it = readable_stream_map_.begin();
 	QuicNormalStream *stream = (QuicNormalStream*)it->second;
+	if (stream == nullptr) { //some error
+		return 0;
+	}
 
 	if (fifo_session_) {
 		if (stream->HasBytesToRead() || (stream->data().size() >= stream->bytes_remaining()) || (stream->data().size() >= len)) {
