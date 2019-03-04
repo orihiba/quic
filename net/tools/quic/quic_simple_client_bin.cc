@@ -76,6 +76,8 @@
 #include "net/tools/quic/synchronous_host_resolver.h"
 #include "url/gurl.h"
 
+#include "net//tools/quic/quicr_api.h"
+
 using base::StringPiece;
 using net::CertVerifier;
 using net::CTPolicyEnforcer;
@@ -136,15 +138,16 @@ private:
 	bool is_fifo_;
 	size_t max_delay_;
 	int sendInner(char * data, size_t len, bool end_of_message);
-	base::AtExitManager quiqos_exit_manager;
-	std::unique_ptr<net::QuicNormalClient> quiqos_client;
-	base::MessageLoopForIO quiqos_message_loop;
+	base::AtExitManager quicr_exit_manager;
+	std::unique_ptr<net::QuicNormalClient> quicr_client;
+	base::MessageLoopForIO quicr_message_loop;
 public:
-	QuicrClient(bool is_fifo, size_t max_delay);
+	QuicrClient(unsigned int flags = FLAGS_NONE, size_t max_delay = 0);
 	bool connect(const char *host, uint16_t port);
 	int send(char *data, size_t len, bool end_of_message);
 	int send(char *data, size_t len);
 	int recv(char *buffer, size_t max_len);
+	connection_status getStatus();
 };
 
 extern "C" EXPORT
@@ -158,7 +161,8 @@ void flush();
 
 void client2()
 {
-	QuicrClient quicr_client(false, 12346);
+	//QuicrClient quicr_client(false, 12346);
+	QuicrClient quicr_client;
 	if (false == quicr_client.connect("127.0.0.1", 6121)) { // 3 packets
 		exit(1);
 	}
@@ -607,9 +611,9 @@ size_t sendRequest(char * name, char * output)
 }
 
 
-QuicrClient::QuicrClient(bool is_fifo, size_t max_delay) : is_fifo_(is_fifo), max_delay_(max_delay)
+QuicrClient::QuicrClient(unsigned int flags, size_t max_delay) : max_delay_(max_delay)
 {
-
+	is_fifo_ = (flags & FLAGS_FIFO) != 0;
 }
 
 //extern "C" EXPORT
@@ -663,8 +667,8 @@ bool QuicrClient::connect(const char * host, uint16_t port)
 		LOG(ERROR) << "Failed to connect";
 		return false;
 	}
-	quiqos_client = std::move(client);
-	quiqos_client->WaitForEvents();
+	quicr_client = std::move(client);
+	quicr_client->WaitForEvents();
 	return true;
 }
 
@@ -688,10 +692,10 @@ int QuicrClient::send(char * data, size_t len, bool end_of_message)
 
 int QuicrClient::sendInner(char * data, size_t len, bool end_of_message)
 {
-	if (quiqos_client == nullptr) {
+	if (quicr_client == nullptr) {
 		return -1;
 	}
-	quiqos_client->WriteOrBufferData(std::string(data), true);
+	quicr_client->WriteOrBufferData(std::string(data), true);
 	
 	return 0;
 }
@@ -699,10 +703,10 @@ int QuicrClient::sendInner(char * data, size_t len, bool end_of_message)
 //extern "C" EXPORT
 int QuicrClient::recv(char *buffer, size_t max_len)
 {
-	if (quiqos_client == nullptr) {
+	if (quicr_client == nullptr) {
 		return 0;
 	}
-	return quiqos_client->Recv(buffer, max_len);
+	return quicr_client->Recv(buffer, max_len);
 }
 
 //extern "C" EXPORT 
@@ -711,3 +715,23 @@ int QuicrClient::recv(char *buffer, size_t max_len)
 //	//while (quiqos_client->connected() && quiqos_client->WaitForEvents() != 0) {}
 //	quiqos_client->WaitForEvents();
 //}
+
+connection_status QuicrClient::getStatus()
+{
+	net::QuicConnection *connection = quicr_client->session()->connection();
+	net::QuicConnectionStats stats = connection->GetStats();
+
+	connection_status status{
+		stats.packets_sent,
+		stats.bytes_sent,
+		stats.packets_received,
+		stats.bytes_received,
+		stats.packets_revived,
+		stats.packets_lost,
+	//	stats.connection_creation_time,
+		connection->sending_fec_configuration(),
+		connection->receiving_fec_configuration(),
+		connection->current_loss_rate(),
+	};
+	return status;
+}

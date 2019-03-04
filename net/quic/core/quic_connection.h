@@ -719,6 +719,10 @@ class NET_EXPORT_PRIVATE QuicConnection
     return last_packet_source_address_;
   }
 
+  float current_loss_rate() { return total_loss_rate; }
+  FecConfiguration sending_fec_configuration() { return current_fec_configuration; } // global
+  FecConfiguration receiving_fec_configuration() { return last_header_.fec_configuration; }
+
  protected:
   // Calls cancel() on all the alarms owned by this connection.
   void CancelAllAlarms();
