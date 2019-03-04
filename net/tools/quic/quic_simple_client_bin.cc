@@ -728,6 +728,8 @@ connection_status QuicrClient::getStatus()
 		stats.bytes_received,
 		stats.packets_revived,
 		stats.packets_lost,
+		stats.min_rtt_us,
+		stats.srtt_us,
 	//	stats.connection_creation_time,
 		connection->sending_fec_configuration(),
 		connection->receiving_fec_configuration(),

@@ -16,6 +16,8 @@ typedef struct connection_status_
 	uint64_t bytes_received;
 	uint64_t packets_revived;
 	uint64_t packet_lost;
+	uint64_t min_rtt; // in microseconds
+	uint64_t smoothed_rtt; // in microseconds
 	//net::QuicTime connection_creation_time;
 	uint32_t sending_fec_configuration;
 	uint32_t receiving_fec_configuration;
@@ -29,6 +31,8 @@ typedef struct connection_status_
 			PRINT_FIELD(bytes_received)
 			PRINT_FIELD(packets_revived)
 			PRINT_FIELD(packet_lost)
+			PRINT_FIELD(min_rtt)
+			PRINT_FIELD(smoothed_rtt)
 			//<< "connection_creation_time:\t" << net::QuicTime::Delta::FromMicroseconds(connection_creation_time.ToDebuggingValue()) << std::endl
 			PRINT_FIELD(sending_fec_configuration)
 			PRINT_FIELD(receiving_fec_configuration)
