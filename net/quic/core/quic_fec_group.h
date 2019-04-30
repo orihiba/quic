@@ -66,8 +66,10 @@ class NET_EXPORT_PRIVATE QuicFecGroup {
   EncryptionLevel EffectiveEncryptionLevel() const ;
   QuicFecGroupNumber FecGroupNumber() const ;
   const std::list<ParityPacket *> getRedundancyPackets();
+  QuicPacketCount GroupTotalSize();
+  QuicPacketCount GroupReduntancySize();
 
- private:
+private:
 
   // Returns the number of missing packets, or QuicPacketCount max
   // if the number of missing packets is not known.

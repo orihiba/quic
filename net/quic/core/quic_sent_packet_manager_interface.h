@@ -192,6 +192,8 @@ class NET_EXPORT_PRIVATE QuicSentPacketManagerInterface {
   // Signals to the congestion controller that the connection has no outstanding
   // data to send.
   virtual void OnApplicationLimited() = 0;
+
+  virtual void AddFecGroup(QuicPacketNumber first, QuicPacketCount size, QuicPacketCount redundAmount) = 0;
 };
 
 }  // namespace net

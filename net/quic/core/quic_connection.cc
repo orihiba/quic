@@ -2125,6 +2125,11 @@ void QuicConnection::OnResetFecGroup() {
 	//fec_alarm_->Cancel();
 }
 
+void QuicConnection::OnFecSent(QuicPacketNumber first, QuicPacketCount size, QuicPacketCount redundAmount)
+{
+	sent_packet_manager_->AddFecGroup(first, size, redundAmount);
+}
+
 QuicPacketNumber QuicConnection::getLeastUnacked()
 {
 	return sent_packet_manager_->GetLeastUnacked(0);

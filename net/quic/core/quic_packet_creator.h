@@ -48,6 +48,8 @@ class NET_EXPORT_PRIVATE QuicPacketCreator {
 	virtual void OnResetFecGroup() = 0;
 
 	virtual QuicPacketNumber getLeastUnacked() = 0;
+
+	virtual void OnFecSent(QuicPacketNumber first, QuicPacketCount size, QuicPacketCount redundAmount) = 0;
   };
 
   // Interface which gets callbacks from the QuicPacketCreator at interesting

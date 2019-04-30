@@ -91,7 +91,9 @@ QuicSentPacketManager::QuicSentPacketManager(
       conservative_handshake_retransmits_(false),
       largest_newly_acked_(0),
       largest_mtu_acked_(0),
-      handshake_confirmed_(false) {
+      handshake_confirmed_(false),
+	  packetGroups(),
+	  packetToGroup() {
   SetSendAlgorithm(congestion_control_type);
 }
 
@@ -293,34 +295,100 @@ void QuicSentPacketManager::MaybeInvokeCongestionEvent(
 
 void QuicSentPacketManager::HandleAckForSentPackets(
     const QuicAckFrame& ack_frame) {
-  // Go through the packets we have not received an ack for and see if this
-  // incoming_ack shows they've been seen by the peer.
-  QuicTime::Delta ack_delay_time = ack_frame.ack_delay_time;
-  QuicPacketNumber packet_number = unacked_packets_.GetLeastUnacked();
-  for (QuicUnackedPacketMap::iterator it = unacked_packets_.begin();
-       it != unacked_packets_.end(); ++it, ++packet_number) {
-    if (packet_number > ack_frame.largest_observed) {
-      // These packets are still in flight.
-      break;
-    }
+	// Go through the packets we have not received an ack for and see if this
+	// incoming_ack shows they've been seen by the peer.
+	QuicTime::Delta ack_delay_time = ack_frame.ack_delay_time;
+	QuicPacketNumber packet_number = unacked_packets_.GetLeastUnacked();
+	for (QuicUnackedPacketMap::iterator it = unacked_packets_.begin();
+		it != unacked_packets_.end(); ++it, ++packet_number) {
+		if (packet_number > ack_frame.largest_observed) {
+			// These packets are still in flight.
+			break;
+		}
 
-    if ((ack_frame.missing && ack_frame.packets.Contains(packet_number)) ||
-        (!ack_frame.missing && !ack_frame.packets.Contains(packet_number))) {
-      // Packet is still missing.
-      continue;
-    }
-    // Packet was acked, so remove it from our unacked packet list.
-    DVLOG(1) << ENDPOINT << "Got an ack for packet " << packet_number;
-    // If data is associated with the most recent transmission of this
-    // packet, then inform the caller.
-    if (it->in_flight) {
-      packets_acked_.push_back(std::make_pair(packet_number, it->bytes_sent));
-    } else if (!it->is_unackable) {
-      // Packets are marked unackable after they've been acked once.
-      largest_newly_acked_ = packet_number;
-    }
-    MarkPacketHandled(packet_number, &(*it), ack_delay_time);
-  }
+		if ((ack_frame.missing && ack_frame.packets.Contains(packet_number)) ||
+			(!ack_frame.missing && !ack_frame.packets.Contains(packet_number))) {
+			// Packet is still missing.
+			continue;
+		}
+		// Packet was acked, so remove it from our unacked packet list.
+		DVLOG(1) << ENDPOINT << "Got an ack for packet " << packet_number;
+
+		// check if exists. if not, the packet was sent without fec protection. handle normally
+		auto group_number_it = packetToGroup.find(packet_number);
+		if (group_number_it != packetToGroup.end()) {
+
+			auto group_number = group_number_it->second;
+			// remove packet, so handle once only
+			packetToGroup.erase(packet_number);
+
+			auto packet_group_it = packetGroups.find(group_number);
+			if (packet_group_it == packetGroups.end()) {
+				// if group is not found but the packet was still in packetToGroup, it means 
+				// we alreday handled that packet and marked as acked once (only)
+				// don't cause dup acks
+				continue;
+			}
+
+			// packet with fec protection. Update fec ack status
+			auto &packetGroup_redundAmount = packet_group_it->second;
+			auto &packetGroup = packetGroup_redundAmount.first;
+			auto redundAmount = packetGroup_redundAmount.second;
+
+			// remove from group
+			packetGroup.remove(packet_number);
+
+			// check size after removal. If redundant size left or less, the group was processed
+			if (packetGroup.size() <= redundAmount) {
+				VLOG(1) << "Got group " << group_number;
+				// handle current packet
+				if (it->in_flight) {
+					packets_acked_.push_back(std::make_pair(packet_number, it->bytes_sent));
+				}
+				else if (!it->is_unackable) {
+					// Packets are marked unackable after they've been acked once.
+					largest_newly_acked_ = packet_number;
+				}
+				MarkPacketHandled(packet_number, &(*it), ack_delay_time);
+
+				// remove remaining packets from packetToGroup
+				for (const auto &packet_num_in_group : packetGroup) {
+					// if packet_num_in_group is smaller then least unacked, dont handle, because already removed
+					if (packet_num_in_group < unacked_packets_.GetLeastUnacked()) {
+						continue;
+					}
+					VLOG(1) << "Marking " << packet_num_in_group;
+					TransmissionInfo* transmission_info = &unacked_packets_.at(packet_num_in_group); 
+
+					if (transmission_info->in_flight) {
+						packets_acked_.push_back(std::make_pair(packet_num_in_group, transmission_info->bytes_sent));
+					}
+					else if (!transmission_info->is_unackable) {
+						// update if bigger
+						largest_newly_acked_ = packet_num_in_group > largest_newly_acked_ ? packet_num_in_group : largest_newly_acked_;
+					}
+					MarkPacketHandled(packet_num_in_group, &(*transmission_info), ack_delay_time);
+				}
+
+				// remove group from packetGroups, so mark as acked
+				packetGroups.erase(group_number);
+
+				// already handled this packet
+				continue;
+			}
+		}
+
+		// If data is associated with the most recent transmission of this
+		// packet, then inform the caller.
+		if (it->in_flight) {
+			packets_acked_.push_back(std::make_pair(packet_number, it->bytes_sent));
+		}
+		else if (!it->is_unackable) {
+			// Packets are marked unackable after they've been acked once.
+			largest_newly_acked_ = packet_number;
+		}
+		MarkPacketHandled(packet_number, &(*it), ack_delay_time);
+	}
 }
 
 void QuicSentPacketManager::RetransmitUnackedPackets(
@@ -1023,6 +1091,17 @@ void QuicSentPacketManager::RemoveObsoletePackets() {
 
 void QuicSentPacketManager::OnApplicationLimited() {
   send_algorithm_->OnApplicationLimited(unacked_packets_.bytes_in_flight());
+}
+
+void QuicSentPacketManager::AddFecGroup(QuicPacketNumber first, QuicPacketCount size, QuicPacketCount redundAmount)
+{
+	//VLOG(1) << "sent" << first << " " << size;
+	packetGroups[first] = std::make_pair(std::list<QuicPacketNumber>(), redundAmount);
+	auto &l = packetGroups[first].first;
+	for (QuicPacketNumber i = first; i < first + size; i++) {
+		l.push_back(i);
+		packetToGroup[i] = first;
+	}
 }
 
 }  // namespace net

@@ -966,7 +966,13 @@ void QuicPacketCreator::SerializeFec() {
 
 		delete *it;
 	}
-	fec_group_.reset(nullptr); 
+
+	auto first_packet = fec_group_->FecGroupNumber();
+	auto size = fec_group_->GroupTotalSize();
+	auto redundAmount = fec_group_->GroupReduntancySize();
+	delegate_->OnFecSent(first_packet, size, redundAmount);
+
+	fec_group_.reset(nullptr);
 	packet_size_ = 0;
 }
 

@@ -70,6 +70,7 @@ class PacketCollector : public QuicPacketCreator::DelegateInterface {
                             ConnectionCloseSource source) override {}
 
 void OnResetFecGroup() override {}
+void OnFecSent(QuicPacketNumber first, QuicPacketCount size, QuicPacketCount redundAmount) override {};
 
 // not used
 QuicPacketNumber getLeastUnacked() override { return 0; }

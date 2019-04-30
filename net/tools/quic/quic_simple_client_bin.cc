@@ -180,15 +180,35 @@ void client2()
 	//while (true);
 	bytes_received = quicr_client.recv(buffer, 5);
 	buffer[bytes_received] = '\0';
-	std::cout << "Received: " << buffer << std::endl;
+	std::cout << "Received1: " << buffer << std::endl;
 
 	bytes_received = quicr_client.recv(buffer, 5);
 	buffer[bytes_received] = '\0';
-	std::cout << "Received: " << buffer << std::endl;
+	std::cout << "Received2: " << buffer << std::endl;
 
 	bytes_received = quicr_client.recv(buffer, 10000);
 	buffer[bytes_received] = '\0';
-	std::cout << "Received: " << buffer << std::endl;
+	std::cout << "Received3: " << buffer << std::endl;
+
+	bytes_received = quicr_client.recv(buffer, 10000);
+	buffer[bytes_received] = '\0';
+	std::cout << "Received4: " << buffer << std::endl;
+
+	bytes_received = quicr_client.recv(buffer, 10000);
+	buffer[bytes_received] = '\0';
+	std::cout << "Received5: " << buffer << std::endl;
+
+	bytes_received = quicr_client.recv(buffer, 10000);
+	buffer[bytes_received] = '\0';
+	std::cout << "Received6: " << buffer << std::endl;
+
+	bytes_received = quicr_client.recv(buffer, 10000);
+	buffer[bytes_received] = '\0';
+	std::cout << "Received7: " << buffer << std::endl;
+
+	bytes_received = quicr_client.recv(buffer, 10000);
+	buffer[bytes_received] = '\0';
+	std::cout << "Received8: " << buffer << std::endl;
 
 	/*bytes_received = recvData(buffer, 10000);
 	buffer[bytes_received] = '\0';

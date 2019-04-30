@@ -147,6 +147,8 @@ class NET_EXPORT_PRIVATE QuicUnackedPacketMap {
   // RTT measurement purposes.
   void RemoveObsoletePackets();
 
+  TransmissionInfo &at(QuicPacketNumber packet_number) { return unacked_packets_.at(packet_number - least_unacked_); }
+
  private:
   // Called when a packet is retransmitted with a new packet number.
   // |old_packet_number| will remain unacked, but will have no

@@ -212,6 +212,8 @@ class NET_EXPORT_PRIVATE QuicSentPacketManager
 
   QuicPacketNumber GetLargestNewlyAcked() const override { return largest_newly_acked_; }
 
+  void AddFecGroup(QuicPacketNumber first, QuicPacketCount size, QuicPacketCount redundAmount) override;
+
  private:
   friend class test::QuicConnectionPeer;
   friend class test::QuicSentPacketManagerPeer;
@@ -415,6 +417,9 @@ class NET_EXPORT_PRIVATE QuicSentPacketManager
   // Records bandwidth from server to client in normal operation, over periods
   // of time with no loss events.
   QuicSustainedBandwidthRecorder sustained_bandwidth_recorder_;
+
+  std::map<QuicPacketNumber, std::pair<std::list<QuicPacketNumber>, QuicPacketCount>> packetGroups;
+  std::map<QuicPacketNumber, QuicPacketNumber> packetToGroup;
 
   DISALLOW_COPY_AND_ASSIGN(QuicSentPacketManager);
 };

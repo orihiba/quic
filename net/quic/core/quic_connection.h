@@ -474,6 +474,7 @@ class NET_EXPORT_PRIVATE QuicConnection
                             ConnectionCloseSource source) override;
   
   void OnResetFecGroup() override;
+  void OnFecSent(QuicPacketNumber first, QuicPacketCount size, QuicPacketCount redundAmount) override;
   QuicPacketNumber getLeastUnacked() override;
   // QuicPacketGenerator::DelegateInterface
   bool ShouldGeneratePacket(HasRetransmittableData retransmittable,

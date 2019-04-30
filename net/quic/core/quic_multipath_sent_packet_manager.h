@@ -166,6 +166,7 @@ class NET_EXPORT_PRIVATE QuicMultipathSentPacketManager
   size_t GetConsecutiveTlpCount() const override;
 
   void OnApplicationLimited() override;
+  void AddFecGroup(QuicPacketNumber first, QuicPacketCount size, QuicPacketCount redundAmount) override {};
 
  private:
   friend class test::QuicConnectionPeer;

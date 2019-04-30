@@ -366,4 +366,14 @@ QuicFecGroupNumber QuicFecGroup::FecGroupNumber() const {
   return min_protected_packet_;
 }
 
+QuicPacketCount QuicFecGroup::GroupTotalSize()
+{
+	return block_count_ + recovery_block_count_; // k + m
+}
+
+QuicPacketCount QuicFecGroup::GroupReduntancySize()
+{
+	return recovery_block_count_;
+}
+
 }  // namespace net
