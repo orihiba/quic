@@ -48,9 +48,13 @@ void QuicUnackedPacketMap::AddSentPacket(SerializedPacket* packet,
 
   const bool has_crypto_handshake =
       packet->has_crypto_handshake == IS_HANDSHAKE;
+
+  VLOG(1) << "generating transmission info for packet " << packet_number << " old = " << old_packet_number;
+
   TransmissionInfo info(packet->encryption_level, packet->packet_number_length,
                         transmission_type, sent_time, bytes_sent,
-                        has_crypto_handshake, packet->num_padding_bytes, packet->is_fec_packet);
+                        has_crypto_handshake, packet->num_padding_bytes, packet->is_fec_packet, 
+						packet->fec_group, packet->fec_configuration, packet->offset_in_fec_group, packet->is_fec_packet ? packet->raw_data : nullptr, packet->raw_data_len);
   if (old_packet_number > 0) {
     TransferRetransmissionInfo(old_packet_number, packet_number,
                                transmission_type, &info);
@@ -199,7 +203,9 @@ bool QuicUnackedPacketMap::IsPacketUsefulForRetransmittableData(
   // retransmitted with a new packet number.
   return !info.retransmittable_frames.empty() ||
          // Allow for an extra 1 RTT before stopping to track old packets.
-         info.retransmission > largest_observed_;
+         info.retransmission > largest_observed_ ||
+	  // data has fec data, so retransmitable
+	  info.is_fec;
 }
 
 bool QuicUnackedPacketMap::IsPacketUseless(QuicPacketNumber packet_number,
@@ -352,6 +358,7 @@ bool QuicUnackedPacketMap::HasUnackedRetransmittableFrames() const {
 }
 
 QuicPacketNumber QuicUnackedPacketMap::GetLeastUnacked() const {
+	VLOG(2) << "Least unacked is " << least_unacked_;
   return least_unacked_;
 }
 

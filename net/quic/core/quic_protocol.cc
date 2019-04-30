@@ -370,7 +370,13 @@ ostream& operator<<(ostream& os, const QuicPacketHeader& header) {
   os << ", entropy_flag: " << header.entropy_flag
      << ", entropy hash: " << static_cast<int>(header.entropy_hash)
      << ", path_id: " << static_cast<int>(header.path_id)
-     << ", packet_number: " << header.packet_number << " }\n";
+     << ", packet_number: " << header.packet_number 
+	  << ", fec_flag: " << header.fec_flag
+	  << ", is_in_fec_group: " << header.is_in_fec_group
+	  << ", fec_group: " << header.fec_group
+	  << ", offset_in_fec_group: " << (size_t)header.offset_in_fec_group << " (" << header.offset_in_fec_group + header.fec_group << ")"
+	  << ", fec_configuration: " << header.fec_configuration
+	  << " }\n";
   return os;
 }
 
@@ -887,7 +893,12 @@ SerializedPacket::SerializedPacket(QuicPathId path_id,
       transmission_type(NOT_RETRANSMISSION),
       original_path_id(kInvalidPathId),
       original_packet_number(0),
-	  is_fec_packet(is_fec_packet) {}
+	  is_fec_packet(is_fec_packet),
+	  raw_data(nullptr),
+	  raw_data_len(0),
+	  fec_group(0),
+	  fec_configuration(FEC_OFF),
+	  offset_in_fec_group(0) {}
 
 SerializedPacket::SerializedPacket(const SerializedPacket& other) = default;
 
@@ -912,7 +923,12 @@ TransmissionInfo::TransmissionInfo(EncryptionLevel level,
                                    QuicPacketLength bytes_sent,
                                    bool has_crypto_handshake,
                                    int num_padding_bytes,
-								   bool is_fec)
+								   bool is_fec,
+									QuicFecGroupNumber fec_group,
+									FecConfiguration fec_configuration,
+									uint8_t offset_in_fec_group,
+									const char *fec_buffer_,
+									QuicPacketLength fec_buffer_len)
     : encryption_level(level),
       packet_number_length(packet_number_length),
       bytes_sent(bytes_sent),
@@ -923,7 +939,16 @@ TransmissionInfo::TransmissionInfo(EncryptionLevel level,
       has_crypto_handshake(has_crypto_handshake),
       num_padding_bytes(num_padding_bytes),
       retransmission(0),
-	  is_fec(is_fec) {}
+	  is_fec(is_fec),
+	fec_group(fec_group),
+	fec_configuration(fec_configuration),
+	offset_in_fec_group(offset_in_fec_group),
+	fec_buffer_len(fec_buffer_len)
+{
+	if (fec_buffer_ != nullptr) {
+		memcpy(fec_buffer, fec_buffer_, fec_buffer_len);
+	}
+}
 
 TransmissionInfo::TransmissionInfo(const TransmissionInfo& other) = default;
 

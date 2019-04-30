@@ -152,7 +152,7 @@ const size_t kQuicPathIdSize = 1;
 // Number of bytes reserved for private flags in the packet header.
 const size_t kPrivateFlagsSize = 1;
 // Number of bytes reserved for FEC group in the packet header.
-const size_t kFecGroupSize = 1;
+const size_t kFecGroupSize = 2;
 
 // Signifies that the QuicPacket will contain version of the protocol.
 const bool kIncludeVersion = true;
@@ -851,6 +851,7 @@ struct NET_EXPORT_PRIVATE QuicPacketHeader {
   InFecGroup is_in_fec_group;
   QuicFecGroupNumber fec_group;
   FecConfiguration fec_configuration;
+  uint8_t offset_in_fec_group;
 };
 
 struct NET_EXPORT_PRIVATE QuicPublicResetPacket {
@@ -1554,6 +1555,11 @@ struct NET_EXPORT_PRIVATE SerializedPacket {
   QuicPathId original_path_id;
   QuicPacketNumber original_packet_number;
   bool is_fec_packet;
+  char *raw_data;
+  size_t raw_data_len;
+  QuicFecGroupNumber fec_group;
+  FecConfiguration fec_configuration;
+  uint8_t offset_in_fec_group;
   // Optional notifiers which will be informed when this packet has been ACKed.
   std::list<AckListenerWrapper> listeners;
 };
@@ -1571,7 +1577,12 @@ struct NET_EXPORT_PRIVATE TransmissionInfo {
                    QuicPacketLength bytes_sent,
                    bool has_crypto_handshake,
                    int num_padding_bytes,
-				   bool is_fec);
+				   bool is_fec,
+				QuicFecGroupNumber fec_group,
+			FecConfiguration fec_configuration,
+			uint8_t offset_in_fec_group,
+			  const char *fec_buffer_,
+			  QuicPacketLength fec_buffer_len);
 
   TransmissionInfo(const TransmissionInfo& other);
 
@@ -1602,6 +1613,13 @@ struct NET_EXPORT_PRIVATE TransmissionInfo {
 
   // Is the packet a FEC packet. If so, treat deifferently when detecting losses.
   bool is_fec;
+
+  QuicFecGroupNumber fec_group;
+  FecConfiguration fec_configuration;
+  uint8_t offset_in_fec_group;
+  char fec_buffer[kMaxPacketSize];
+
+  QuicPacketLength fec_buffer_len;
 };
 
 // Struct to store the pending retransmission information.
@@ -1613,7 +1631,12 @@ struct PendingRetransmission {
                         bool has_crypto_handshake,
                         int num_padding_bytes,
                         EncryptionLevel encryption_level,
-                        QuicPacketNumberLength packet_number_length)
+                        QuicPacketNumberLength packet_number_length,
+						QuicFecGroupNumber fec_group = 0,
+						FecConfiguration fec_configuration = FEC_OFF,
+						uint8_t offset_in_fec_group = 0,
+						  const char *fec_buffer_ = nullptr,
+						  QuicPacketLength fec_buffer_len = 0)
       : packet_number(packet_number),
         retransmittable_frames(retransmittable_frames),
         transmission_type(transmission_type),
@@ -1621,7 +1644,16 @@ struct PendingRetransmission {
         has_crypto_handshake(has_crypto_handshake),
         num_padding_bytes(num_padding_bytes),
         encryption_level(encryption_level),
-        packet_number_length(packet_number_length) {}
+        packet_number_length(packet_number_length),
+	  fec_group(fec_group),
+	  fec_configuration(fec_configuration),
+	  offset_in_fec_group(offset_in_fec_group),
+	  fec_buffer_len(fec_buffer_len)
+  {
+	  if (fec_buffer_ != nullptr) {
+		  memcpy(fec_buffer, fec_buffer_, fec_buffer_len);
+	  }
+  }
 
   QuicPacketNumber packet_number;
   const QuicFrames& retransmittable_frames;
@@ -1631,6 +1663,11 @@ struct PendingRetransmission {
   int num_padding_bytes;
   EncryptionLevel encryption_level;
   QuicPacketNumberLength packet_number_length;
+  QuicFecGroupNumber fec_group;
+  FecConfiguration fec_configuration;
+  uint8_t offset_in_fec_group;
+  char fec_buffer[kMaxPacketSize];
+  QuicPacketLength fec_buffer_len;
 };
 
 // Convenience wrapper to wrap an iovec array and the total length, which must

@@ -29,7 +29,8 @@ public:
 	QuicPacketNumber packet_number;
 	std::string packet_data;
 	QuicPacketNumberLength packet_number_len;
-	ParityPacket(QuicPacketNumber packet_number_, std::string packet_data_, QuicPacketNumberLength packet_number_len_) : packet_number(packet_number_), packet_data(packet_data_), packet_number_len(packet_number_len_) { }
+	uint8_t offset_in_fec_group;
+	ParityPacket(QuicPacketNumber packet_number_, std::string packet_data_, QuicPacketNumberLength packet_number_len_, uint8_t offset_in_fec_group_) : packet_number(packet_number_), packet_data(packet_data_), packet_number_len(packet_number_len_), offset_in_fec_group(offset_in_fec_group_) { }
 	~ParityPacket() = default;
 };
 
@@ -47,7 +48,7 @@ class NET_EXPORT_PRIVATE QuicFecGroup {
               base::StringPiece decrypted_payload, 
 			bool is_fec_data) ;
   bool UpdateSentList(EncryptionLevel encryption_level,
-	  const QuicPacketHeader& header,
+	  QuicPacketHeader& header,
 	  base::StringPiece decrypted_payload);
   bool UpdateFec(EncryptionLevel encryption_level,
                  const QuicPacketHeader& header,
@@ -103,6 +104,8 @@ private:
   // the data and FEC in the group.
   EncryptionLevel effective_encryption_level_;
 
+  // If the parity_received_packets_ contains fec_packets
+  size_t fec_packets_number;
   DISALLOW_COPY_AND_ASSIGN(QuicFecGroup);
 };
 

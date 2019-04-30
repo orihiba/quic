@@ -72,7 +72,7 @@ QuicPacketCreator::~QuicPacketCreator() {
 }
 
 void QuicPacketCreator::OnBuiltFecProtectedPayload(
-	const QuicPacketHeader& header,
+	QuicPacketHeader& header,
 	StringPiece payload) {
 	if (fec_group_.get() != nullptr) {
 		DCHECK_NE(0u, header.fec_group);
@@ -390,7 +390,7 @@ void QuicPacketCreator::CreateStreamFrame(QuicStreamId id,
   const size_t data_size = iov.total_length - iov_offset;
   size_t min_frame_size = QuicFramer::GetMinStreamFrameSize(
       id, offset, /* last_frame_in_packet= */ true, is_in_fec_group);
-  // HIBA 2 for size. not sure if needed
+  // HIBA 2 for size. not sure if needed. Maybe 3 is needed
   size_t bytes_consumed = min<size_t>(BytesFree() - min_frame_size - 2, data_size);
 
   bool set_fin = fin && bytes_consumed == data_size;  // Last frame.
@@ -461,8 +461,7 @@ void QuicPacketCreator::ReserializeAllFrames(
 	//return;
   DCHECK(queued_frames_.empty());
   DCHECK_EQ(0, packet_.num_padding_bytes);
-  QUIC_BUG_IF(retransmission.retransmittable_frames.empty())
-      << "Attempt to serialize empty packet";
+  
   const EncryptionLevel default_encryption_level = packet_.encryption_level;
 
   // Temporarily set the packet number length and change the encryption level.
@@ -475,22 +474,68 @@ void QuicPacketCreator::ReserializeAllFrames(
     //packet_.encryption_level = retransmission.encryption_level; // TODO
   }
 
-  // Serialize the packet and restore packet number length state.
-  for (const QuicFrame& frame : retransmission.retransmittable_frames) {
-    bool success = AddFrame(frame, false);
-    QUIC_BUG_IF(!success) << " Failed to add frame of type:" << frame.type
-                          << " num_frames:"
-                          << retransmission.retransmittable_frames.size()
-                          << " retransmission.packet_number_length:"
-                          << retransmission.packet_number_length
-                          << " packet_.packet_number_length:"
-                          << packet_.packet_number_length;
+  // if not fec
+  if (retransmission.fec_buffer_len == 0) {
+	  QUIC_BUG_IF(retransmission.retransmittable_frames.empty())
+		  << "Attempt to serialize empty packet";
+	  // Serialize the packet and restore packet number length state.
+	  for (const QuicFrame& frame : retransmission.retransmittable_frames) {
+		  bool success = AddFrame(frame, false);
+		  QUIC_BUG_IF(!success) << " Failed to add frame of type:" << frame.type
+			  << " num_frames:"
+			  << retransmission.retransmittable_frames.size()
+			  << " retransmission.packet_number_length:"
+			  << retransmission.packet_number_length
+			  << " packet_.packet_number_length:"
+			  << packet_.packet_number_length;
+	  }
+	  QuicPacketHeader temp_header;
+	  temp_header.public_header.connection_id = 0x1337;
+	  temp_header.fec_configuration = retransmission.fec_configuration;;
+	  temp_header.fec_group = retransmission.fec_group;;
+	  temp_header.offset_in_fec_group = retransmission.offset_in_fec_group;;
+
+	  SerializePacket(buffer, buffer_len, temp_header);
+	  packet_.original_path_id = retransmission.path_id;
+	  packet_.original_packet_number = retransmission.packet_number;
+	  packet_.transmission_type = retransmission.transmission_type;
+	  OnSerializedPacket(false); //TODO maybe should send true for reserialized fec?
+  } else { // if fec
+	  //SerializeFecPacket()
+	  QuicPacketHeader header;
+	  header.public_header.multipath_flag = send_path_id_in_packet_;
+	  FillPacketHeader(true, &header); // increase packet number
+
+	  // restore fec data
+	  header.is_in_fec_group = IN_FEC_GROUP;
+	  header.fec_group = retransmission.fec_group;//fec_group;
+	  header.fec_configuration = retransmission.fec_configuration; //fec_group_ != nullptr ? fec_group_->fec_configuration : FEC_OFF;
+	  header.offset_in_fec_group = retransmission.offset_in_fec_group;
+	  std::unique_ptr<QuicPacket> packet(framer_->BuildFecPacket(header, StringPiece(retransmission.fec_buffer, retransmission.fec_buffer_len), true));
+	  packet_.entropy_hash = QuicFramer::GetPacketEntropyHash(header);
+
+	  memcpy(buffer, packet->data(), packet->length());
+
+	  size_t encrypted_length = framer_->EncryptInPlace(
+		  packet_.encryption_level, packet_.path_id, header.packet_number, GetStartOfEncryptedData(framer_->version(), header), packet->length(),
+		  kMaxPacketSize, buffer);
+	  if (encrypted_length == 0) {
+		  QUIC_BUG << "Failed to encrypt packet number " << packet_.packet_number;
+		  return;
+	  }
+
+	  packet_.encrypted_buffer = buffer;
+	  packet_.encrypted_length = encrypted_length;
+	  packet_.is_fec_packet = true;
+
+	  packet_.original_path_id = retransmission.path_id;
+	  packet_.original_packet_number = retransmission.packet_number;
+	  packet_.transmission_type = retransmission.transmission_type;
+	  OnSerializedPacket(true); //TODO maybe should send true for reserialized fec?
   }
-  SerializePacket(buffer, buffer_len);
-  packet_.original_path_id = retransmission.path_id;
-  packet_.original_packet_number = retransmission.packet_number;
-  packet_.transmission_type = retransmission.transmission_type;
-  OnSerializedPacket(false);
+
+  VLOG(1) << "retransmitting packet number " << retransmission.packet_number << " in packet number " << packet_.packet_number;
+
   // Restore old values.
   packet_.encryption_level = default_encryption_level;
 }
@@ -682,12 +727,28 @@ void QuicPacketCreator::AddAckListener(QuicAckListenerInterface* listener,
 }
 
 void QuicPacketCreator::SerializePacket(char* encrypted_buffer,
-                                        size_t encrypted_buffer_len) {
+                                        size_t encrypted_buffer_len,
+										const QuicPacketHeader &input_header) {
   DCHECK_LT(0u, encrypted_buffer_len);
   QUIC_BUG_IF(queued_frames_.empty()) << "Attempt to serialize empty packet";
   QuicPacketHeader header;
   // FillPacketHeader increments packet_number_.
   FillPacketHeader(false, &header);
+
+  if (input_header.public_header.connection_id == 0x1337) { // if retransmited packet
+	header.fec_group = input_header.fec_group;
+	header.offset_in_fec_group = input_header.offset_in_fec_group;
+	header.fec_configuration = input_header.fec_configuration;
+  } else if (fec_group_.get() != nullptr) {
+	  DCHECK_NE(0u, header.fec_group);
+	  header.offset_in_fec_group = fec_group_->NumSentPackets();
+  }
+
+  // saving in packet_, because used afterwards in quic_unacked_packet_map
+  packet_.offset_in_fec_group = header.offset_in_fec_group;
+  packet_.fec_group = header.fec_group;
+  packet_.fec_configuration = header.fec_configuration;
+  packet_.is_fec_packet = header.fec_flag;
 
   MaybeAddPadding();
 
@@ -703,7 +764,10 @@ void QuicPacketCreator::SerializePacket(char* encrypted_buffer,
 
   const size_t start_of_fec = GetPacketHeaderSize(framer_->version(), header);
 
-  OnBuiltFecProtectedPayload(header, StringPiece(encrypted_buffer + start_of_fec, length - start_of_fec));
+  // id retransmited packet, don't add to fec group
+  if (input_header.public_header.connection_id != 0x1337) {
+	  OnBuiltFecProtectedPayload(header, StringPiece(encrypted_buffer + start_of_fec, length - start_of_fec));
+  }
 
   // ACK Frames will be truncated due to length only if they're the only frame
   // in the packet, and if packet_size_ was set to max_plaintext_size_. If
@@ -920,7 +984,6 @@ void QuicPacketCreator::SerializeFec() {
 	}
 
 	std::list<ParityPacket *> parities = fec_group_->getRedundancyPackets();
-
 	for (std::list<ParityPacket *>::reverse_iterator it = parities.rbegin(); it != parities.rend(); it++)
 	{
 		QuicPacketHeader header;
@@ -931,9 +994,12 @@ void QuicPacketCreator::SerializeFec() {
 		// will choose the packet number automatically . we will override it
 		FillPacketHeader(true, &header);
 		header.packet_number = (*it)->packet_number;
+		header.offset_in_fec_group = (*it)->offset_in_fec_group;
+		packet_.raw_data = (char*)((*it)->packet_data.c_str());
+		packet_.raw_data_len = (*it)->packet_data.length();
+		packet_.offset_in_fec_group = header.offset_in_fec_group;
 
 		std::unique_ptr<QuicPacket> packet(framer_->BuildFecPacket(header, StringPiece((*it)->packet_data)));
-		
 		packet_.entropy_hash = QuicFramer::GetPacketEntropyHash(header);
 	
 		ALIGNAS(64) char seralized_fec_buffer[kMaxPacketSize];
@@ -952,7 +1018,9 @@ void QuicPacketCreator::SerializeFec() {
 		packet_.encrypted_buffer = seralized_fec_buffer;
 		packet_.encrypted_length = encrypted_length;
 		packet_.is_fec_packet = true;
-		DVLOG(1) << "serialized fec! number: " << header.packet_number << " size: " << packet_.encrypted_length << " || " << StringPiece((*it)->packet_data).size();
+		packet_.fec_group = header.fec_group;
+		packet_.fec_configuration = header.fec_configuration;
+		DVLOG(1) << "serialized fec - number: " << header.packet_number << " size: " << packet_.encrypted_length << " || " << StringPiece((*it)->packet_data).size();
 		
 		OnSerializedPacket(true);
 

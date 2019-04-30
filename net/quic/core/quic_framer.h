@@ -307,7 +307,7 @@ class NET_EXPORT_PRIVATE QuicFramer {
   // the fields in |header| and |fec|.  Returns nullptr if the packet could
   // not be created.
   QuicPacket* BuildFecPacket(const QuicPacketHeader& header,
-	  base::StringPiece redundancy);
+	  base::StringPiece redundancy, bool not_fec=false);
 
   // Returns a new public reset packet, owned by the caller.
   static QuicEncryptedPacket* BuildPublicResetPacket(
