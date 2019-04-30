@@ -135,7 +135,8 @@ public:
 		const QuicVersionVector& supported_versions, 
 		base::WaitableEvent *session_event,
 		bool is_fifo,
-		size_t max_delay);
+		size_t max_delay,
+		bool high_quality);
 
 	virtual ~QuicNormalServer();
 

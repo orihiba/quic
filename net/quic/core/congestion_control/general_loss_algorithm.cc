@@ -31,7 +31,8 @@ GeneralLossAlgorithm::GeneralLossAlgorithm()
       largest_sent_on_spurious_retransmit_(0),
       loss_type_(kNack),
       reordering_shift_(kDefaultLossDelayShift),
-	largest_previously_acked_(0) { initFec(); if (useFec) kNumberOfNacksBeforeRetransmission = kDefaultMaxPacketsPerFecGroup; }
+	largest_previously_acked_(0) {
+	initCommandlineArgs(); if (useFec) kNumberOfNacksBeforeRetransmission = kDefaultMaxPacketsPerFecGroup; }
 
 GeneralLossAlgorithm::GeneralLossAlgorithm(LossDetectionType loss_type)
     : loss_detection_timeout_(QuicTime::Zero()),
@@ -41,7 +42,7 @@ GeneralLossAlgorithm::GeneralLossAlgorithm(LossDetectionType loss_type)
                             ? kDefaultAdaptiveLossDelayShift
                             : kDefaultLossDelayShift),
       largest_previously_acked_(0) {
-	initFec(); if (useFec) kNumberOfNacksBeforeRetransmission = kDefaultMaxPacketsPerFecGroup;
+	initCommandlineArgs(); if (useFec) kNumberOfNacksBeforeRetransmission = kDefaultMaxPacketsPerFecGroup;
 }
 
 LossDetectionType GeneralLossAlgorithm::GetLossDetectionType() const {

@@ -1998,7 +1998,7 @@ bool QuicConnection::WritePacket(SerializedPacket* packet) {
       packet, packet->original_path_id, packet->original_packet_number,
       packet_send_time, packet->transmission_type, IsRetransmittable(*packet));
 
-  if (!packet->is_fec_packet && (reset_retransmission_alarm || !retransmission_alarm_->IsSet())) {
+  if (reset_retransmission_alarm || !retransmission_alarm_->IsSet()) {
     SetRetransmissionAlarm();
   }
 

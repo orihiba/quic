@@ -186,6 +186,7 @@ QuicNormalClient::QuicNormalClient(
 	const QuicVersionVector& supported_versions,
 	std::unique_ptr<ProofVerifier> proof_verifier,
 	bool is_fifo,
+	bool high_quality,
 	size_t max_delay)
 	: QuicNormalClient(server_address,
 		server_id,
@@ -193,6 +194,7 @@ QuicNormalClient::QuicNormalClient(
 		QuicConfig(),
 		std::move(proof_verifier),
 		is_fifo,
+		high_quality,
 		max_delay) {}
 
 QuicNormalClient::QuicNormalClient(
@@ -202,6 +204,7 @@ QuicNormalClient::QuicNormalClient(
 	const QuicConfig& config,
 	std::unique_ptr<ProofVerifier> proof_verifier,
 	bool is_fifo,
+	bool high_quality,
 	size_t max_delay)
 	: QuicNormalClientBase(server_id,
 		supported_versions,
@@ -214,6 +217,7 @@ QuicNormalClient::QuicNormalClient(
 	initialized_(false),
 	packet_reader_started_(false),
 	weak_factory_(this) {
+	highQuality = high_quality;
 	set_server_address(server_address);
 }
 

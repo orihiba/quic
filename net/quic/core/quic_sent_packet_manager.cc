@@ -449,6 +449,12 @@ void QuicSentPacketManager::MarkForRetransmission(
       return;
     }
 
+	if (transmission_type != HANDSHAKE_RETRANSMISSION) {
+		if (useFec && !highQuality) {
+			return;
+		}
+	}
+
     pending_retransmissions_[packet_number] = transmission_type;
   }
 }
@@ -802,7 +808,7 @@ void QuicSentPacketManager::InvokeLossDetection(QuicTime time) {
     DCHECK_LE(packets_acked_.front().first, packets_acked_.back().first);
     largest_newly_acked_ = packets_acked_.back().first;
   }
-  loss_algorithm_->DetectLosses(unacked_packets_, time, rtt_stats_,// TODO - doesnt recognize FEC losses
+  loss_algorithm_->DetectLosses(unacked_packets_, time, rtt_stats_,
                                 largest_newly_acked_, &packets_lost_);
   for (const auto& pair : packets_lost_) {
     ++stats_->packets_lost;

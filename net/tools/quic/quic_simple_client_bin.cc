@@ -136,6 +136,7 @@ class QuicrClient
 {
 private:
 	bool is_fifo_;
+	bool high_quality_;
 	size_t max_delay_;
 	int sendInner(char * data, size_t len, bool end_of_message);
 	base::AtExitManager quicr_exit_manager;
@@ -162,7 +163,7 @@ void flush();
 void client2()
 {
 	//QuicrClient quicr_client(false, 12346);
-	QuicrClient quicr_client;
+	QuicrClient quicr_client(FLAGS_HIGH_QUALITY);
 	if (false == quicr_client.connect("127.0.0.1", 6121)) { // 3 packets
 		exit(1);
 	}
@@ -630,10 +631,10 @@ size_t sendRequest(char * name, char * output)
 	}
 }
 
-
 QuicrClient::QuicrClient(unsigned int flags, size_t max_delay) : max_delay_(max_delay)
 {
 	is_fifo_ = (flags & FLAGS_FIFO) != 0;
+	high_quality_ = (flags & FLAGS_HIGH_QUALITY) != 0;
 }
 
 //extern "C" EXPORT
@@ -677,7 +678,7 @@ bool QuicrClient::connect(const char * host, uint16_t port)
 			ct_verifier.get()));
 	std::unique_ptr<net::QuicNormalClient> client(
 		new net::QuicNormalClient(net::IPEndPoint(ip_addr, port), server_id,
-			versions, std::move(proof_verifier), is_fifo_, max_delay_));
+			versions, std::move(proof_verifier), is_fifo_, high_quality_, max_delay_));
 	client->set_initial_max_packet_length(net::kDefaultMaxPacketSize);
 	if (!client->Initialize()) {
 		cerr << "Failed to initialize client." << endl;

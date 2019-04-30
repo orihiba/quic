@@ -213,7 +213,8 @@ QuicNormalServer::QuicNormalServer(
 	const QuicVersionVector& supported_versions,
 	base::WaitableEvent *session_event,
 	bool is_fifo,
-	size_t max_delay)
+	size_t max_delay,
+	bool high_quality)
 	: version_manager_(supported_versions),
 	helper_(
 		new QuicChromiumConnectionHelper(&clock_, QuicRandom::GetInstance())),
@@ -233,6 +234,7 @@ QuicNormalServer::QuicNormalServer(
 	weak_factory_(this),
 	is_fifo_(is_fifo),
 	max_delay_(max_delay) {
+	highQuality = high_quality;
 		data_event_ = new base::WaitableEvent(base::WaitableEvent::ResetPolicy::AUTOMATIC,
 			base::WaitableEvent::InitialState::NOT_SIGNALED);
 	Initialize();
