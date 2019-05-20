@@ -233,4 +233,9 @@ const string QuicStreamSequencer::DebugString() const {
   // clang-format on
 }
 
+void QuicStreamSequencer::Shrink()
+{
+	buffered_frames_.Shrink();
+}
+
 }  // namespace net

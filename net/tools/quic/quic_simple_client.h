@@ -120,7 +120,8 @@ public:
 		std::unique_ptr<ProofVerifier> proof_verifier,
 		bool is_fifo,
 		bool high_quality,
-		size_t max_delay);
+		size_t max_delay,
+		size_t lost_bytes_delta);
 	QuicNormalClient(IPEndPoint server_address,
 		const QuicServerId& server_id,
 		const QuicVersionVector& supported_versions,
@@ -128,7 +129,8 @@ public:
 		std::unique_ptr<ProofVerifier> proof_verifier,
 		bool is_fifo,
 		bool high_quality,
-		size_t max_delay);
+		size_t max_delay,
+		size_t lost_bytes_delta);
 
 	~QuicNormalClient() override;
 

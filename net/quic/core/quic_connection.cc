@@ -1531,7 +1531,7 @@ void QuicConnection::ProcessUdpPacket(const IPEndPoint& self_address,
 #ifdef LOSS
   if (perspective_ == Perspective::IS_CLIENT) {
 	//  if (number_of_packets++ == 4) { return; }
-	 if (/*(number_of_packets >= 3 && number_of_packets <= 5) ||*/ (number_of_packets >= 10 && number_of_packets <= 30) || (number_of_packets >= 52 && number_of_packets <= 54) /*|| (number_of_packets >= 29 && number_of_packets <= 33) || (number_of_packets >= 36 && number_of_packets <= 40)*/)
+	 if (/*(number_of_packets >= 3 && number_of_packets <= 5) ||*/ (number_of_packets >= 20 && number_of_packets <= 30) || (number_of_packets >= 35 && number_of_packets <= 45) /*|| (number_of_packets >= 29 && number_of_packets <= 33) || (number_of_packets >= 36 && number_of_packets <= 40)*/)
 	 {
 	   number_of_packets++;
 		  return;
@@ -2429,6 +2429,9 @@ QuicFecGroup* QuicConnection::GetFecGroup() {
 		}
 		VLOG(2) << "fec_configuration: " << last_header_.fec_configuration << " for group: " << fec_group_num;
 		group_map_[fec_group_num] = new QuicFecGroup(fec_group_num, last_header_.fec_configuration);
+		/*if (useFec && !highQuality) {
+			visitor_->ShrinkStreams();
+		}*/
 	}
 	VLOG(2) << "returning fec group for number " << fec_group_num << ". number of packets are: " << group_map_[fec_group_num]->NumReceivedPackets();
 	return group_map_[fec_group_num];

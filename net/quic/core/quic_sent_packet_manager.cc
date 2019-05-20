@@ -522,6 +522,7 @@ PendingRetransmission QuicSentPacketManager::NextPendingRetransmission() {
 		  transmission_info.fec_group,
 		  transmission_info.fec_configuration,
 		  transmission_info.offset_in_fec_group,
+		  transmission_info.is_in_fec_group,
 		  transmission_info.fec_buffer,
 		  transmission_info.fec_buffer_len);
   }
@@ -536,7 +537,8 @@ PendingRetransmission QuicSentPacketManager::NextPendingRetransmission() {
                                transmission_info.packet_number_length,
 							  transmission_info.fec_group,
 							  transmission_info.fec_configuration,
-							  transmission_info.offset_in_fec_group);
+							  transmission_info.offset_in_fec_group,
+						transmission_info.is_in_fec_group);
 }
 
 QuicPacketNumber QuicSentPacketManager::GetNewestRetransmission(

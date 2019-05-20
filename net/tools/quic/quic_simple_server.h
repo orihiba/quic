@@ -132,10 +132,11 @@ public:
 		std::unique_ptr<ProofSource> proof_source,
 		const QuicConfig& config,
 		const QuicCryptoServerConfig::ConfigOptions& crypto_config_options,
-		const QuicVersionVector& supported_versions, 
+		const QuicVersionVector& supported_versions,
 		base::WaitableEvent *session_event,
 		bool is_fifo,
 		size_t max_delay,
+		size_t lost_bytes_delta,
 		bool high_quality);
 
 	virtual ~QuicNormalServer();
@@ -168,6 +169,7 @@ public:
 
 	bool is_fifo() { return is_fifo_; }
 	size_t max_delay() { return max_delay_;  }
+	size_t lost_bytes_delta() { return lost_bytes_delta_; }
 
 private:
 	friend class test::QuicSimpleServerPeer;
@@ -230,6 +232,7 @@ private:
 
 	bool is_fifo_;
 	size_t max_delay_;
+	size_t lost_bytes_delta_;
 
 	DISALLOW_COPY_AND_ASSIGN(QuicNormalServer);
 };

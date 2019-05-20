@@ -50,6 +50,7 @@ QuicStreamSequencerBuffer::QuicStreamSequencerBuffer(size_t max_capacity_bytes)
       blocks_count_(
           ceil(static_cast<double>(max_capacity_bytes) / kBlockSizeBytes)),
       total_bytes_read_(0),
+	  total_bytes_shrank_(0),
       reduce_sequencer_buffer_memory_life_time_(
           FLAGS_quic_reduce_sequencer_buffer_memory_life_time),  // NOLINT
       blocks_(reduce_sequencer_buffer_memory_life_time_
@@ -242,6 +243,14 @@ QuicErrorCode QuicStreamSequencerBuffer::OnStreamData(
   frame_arrival_time_map_.insert(
       std::make_pair(starting_offset, FrameInfo(size, timestamp)));
   num_bytes_buffered_ += total_written;
+
+  if (useFec && !highQuality) {
+	  size_t max_byte_written = gaps_.back().begin_offset - 1;
+	  size_t first_lost_byte = gaps_.front().begin_offset;
+	  if (gaps_.size() > 1 && (max_byte_written - first_lost_byte > lostBytesDelta)) {
+		  Shrink();
+	  }
+  }
   return QUIC_NO_ERROR;
 }
 
@@ -275,6 +284,23 @@ inline void QuicStreamSequencerBuffer::UpdateGapList(
   }
 }
 
+size_t QuicStreamSequencerBuffer::BytesAvailableInBlock()
+{
+	size_t block_idx = NextBlockToRead();
+	size_t start_offset_in_block = ReadOffset();
+	size_t block_capacity = GetBlockCapacity(block_idx);
+	size_t bytes_capacity_remain_in_block = block_capacity - start_offset_in_block;
+
+	size_t bytes_available_in_block =
+		    min<size_t>(ReadableBytes(), bytes_capacity_remain_in_block);
+
+	if (total_bytes_shrank_ != 0) {
+		size_t until_first_shrank_gap = gaps_shrank_.front().begin_offset - total_bytes_read_;
+		bytes_available_in_block = min<size_t>(bytes_available_in_block, until_first_shrank_gap);
+	}
+	return bytes_available_in_block;
+}
+
 QuicErrorCode QuicStreamSequencerBuffer::Readv(const iovec* dest_iov,
                                                size_t dest_count,
                                                size_t* bytes_read,
@@ -286,9 +312,7 @@ QuicErrorCode QuicStreamSequencerBuffer::Readv(const iovec* dest_iov,
     while (dest_remaining > 0 && ReadableBytes() > 0) {
       size_t block_idx = NextBlockToRead();
       size_t start_offset_in_block = ReadOffset();
-      size_t block_capacity = GetBlockCapacity(block_idx);
-      size_t bytes_available_in_block =
-          min<size_t>(ReadableBytes(), block_capacity - start_offset_in_block);
+   	  size_t bytes_available_in_block = BytesAvailableInBlock();
       size_t bytes_to_copy =
           min<size_t>(bytes_available_in_block, dest_remaining);
       DCHECK_GT(bytes_to_copy, 0UL);
@@ -329,67 +353,127 @@ QuicErrorCode QuicStreamSequencerBuffer::Readv(const iovec* dest_iov,
   }
 
   if (*bytes_read > 0) {
-    UpdateFrameArrivalMap(total_bytes_read_);
+    UpdateFrameArrivalMap(total_bytes_read_ );
   }
   return QUIC_NO_ERROR;
 }
 
+QuicStreamOffset QuicStreamSequencerBuffer::ReadbleOffsetEnd() const
+{
+	QuicStreamOffset readable_offset_end = gaps_.front().begin_offset - 1;
+	if (total_bytes_shrank_ != 0) {
+		size_t first_shrank_gap = gaps_shrank_.front().begin_offset - 1;
+		readable_offset_end = min<size_t>(readable_offset_end, first_shrank_gap);
+	}
+	return readable_offset_end;
+}
+
 int QuicStreamSequencerBuffer::GetReadableRegions(struct iovec* iov,
-                                                  int iov_count) const {
-  DCHECK(iov != nullptr);
-  DCHECK_GT(iov_count, 0);
+													int iov_count) const {
+	DCHECK(iov != nullptr);
+	DCHECK_GT(iov_count, 0);
 
-  if (ReadableBytes() == 0) {
-    iov[0].iov_base = nullptr;
-    iov[0].iov_len = 0;
-    return 0;
-  }
+	if (ReadableBytes() == 0) {
+		iov[0].iov_base = nullptr;
+		iov[0].iov_len = 0;
+		return 0;
+	}
 
-  size_t start_block_idx = NextBlockToRead();
-  QuicStreamOffset readable_offset_end = gaps_.front().begin_offset - 1;
-  DCHECK_GE(readable_offset_end + 1, total_bytes_read_);
-  size_t end_block_offset = GetInBlockOffset(readable_offset_end);
-  size_t end_block_idx = GetBlockIndex(readable_offset_end);
+	size_t start_block_idx = NextBlockToRead();
+	QuicStreamOffset readable_offset_end = gaps_.front().begin_offset - 1;
+	DCHECK_GE(readable_offset_end + 1, total_bytes_read_);
+	size_t end_block_offset = GetInBlockOffset(readable_offset_end);
+	size_t end_block_idx = GetBlockIndex(readable_offset_end);
+	
+	int iov_used = 0;
+	QuicStreamOffset curr_offset = total_bytes_read_;
 
-  // If readable region is within one block, deal with it seperately.
-  if (start_block_idx == end_block_idx && ReadOffset() <= end_block_offset) {
-    iov[0].iov_base = blocks_[start_block_idx]->buffer + ReadOffset();
-    iov[0].iov_len = ReadableBytes();
-    DVLOG(1) << "Got only a single block with index: " << start_block_idx;
-    return 1;
-  }
+	// Get readable regions of the rest blocks till either 2nd to last block
+	// before gap is met or |iov| is filled. For these blocks, one whole block is
+	// a region.	
+	size_t block_idx = start_block_idx;
 
-  // Get first block
-  iov[0].iov_base = blocks_[start_block_idx]->buffer + ReadOffset();
-  iov[0].iov_len = GetBlockCapacity(start_block_idx) - ReadOffset();
-  DVLOG(1) << "Got first block " << start_block_idx << " with len "
-           << iov[0].iov_len;
-  DCHECK_GT(readable_offset_end + 1, total_bytes_read_ + iov[0].iov_len)
-      << "there should be more available data";
+	size_t first_shrank_gap_block_idx = end_block_idx;
 
-  // Get readable regions of the rest blocks till either 2nd to last block
-  // before gap is met or |iov| is filled. For these blocks, one whole block is
-  // a region.
-  int iov_used = 1;
-  size_t block_idx = (start_block_idx + iov_used) % blocks_count_;
-  while (block_idx != end_block_idx && iov_used < iov_count) {
-    DCHECK_NE(static_cast<BufferBlock*>(nullptr), blocks_[block_idx]);
-    iov[iov_used].iov_base = blocks_[block_idx]->buffer;
-    iov[iov_used].iov_len = GetBlockCapacity(block_idx);
-    DVLOG(1) << "Got block with index: " << block_idx;
-    ++iov_used;
-    block_idx = (start_block_idx + iov_used) % blocks_count_;
-  }
+	if (!gaps_shrank_.empty()) {
+		first_shrank_gap_block_idx = GetBlockIndex(gaps_shrank_.front().begin_offset);
+	}
 
-  // Deal with last block if |iov| can hold more.
-  if (iov_used < iov_count) {
-    DCHECK_NE(static_cast<BufferBlock*>(nullptr), blocks_[block_idx]);
-    iov[iov_used].iov_base = blocks_[end_block_idx]->buffer;
-    iov[iov_used].iov_len = end_block_offset + 1;
-    DVLOG(1) << "Got last block with index: " << end_block_idx;
-    ++iov_used;
-  }
-  return iov_used;
+	// read until block of first shrank gap (or until end if no shrink exist)
+	while (block_idx < first_shrank_gap_block_idx && block_idx < end_block_idx) {
+		if (iov_used >= iov_count) {
+			break;
+		}
+		size_t off_in_block = GetInBlockOffset(curr_offset); // will be 0 from 2nd block
+		iov[iov_used].iov_base = blocks_[block_idx]->buffer + off_in_block;
+		iov[iov_used].iov_len = GetBlockCapacity(block_idx) - off_in_block;
+		curr_offset += iov[iov_used].iov_len;
+		block_idx = (block_idx + 1) % blocks_count_;
+		iov_used++;
+	}
+
+	for (const auto curr_gap : gaps_shrank_) {
+		// increase until inside block
+
+		if (iov_used >= iov_count) {
+			break;
+		}
+		size_t off_in_block = GetInBlockOffset(curr_offset);
+		// if we read until end of data (cant happen inside shrank gaps...)
+		if (curr_offset >= readable_offset_end) {
+			break;
+		}
+		// if arrived empty gap, skip it
+		if (curr_offset == curr_gap.begin_offset) {
+			curr_offset = curr_gap.end_offset;
+			block_idx = GetBlockIndex(curr_offset);
+			continue;
+		}
+
+		DCHECK_NE(static_cast<BufferBlock*>(nullptr), blocks_[block_idx]);
+		QuicStreamOffset curr_shrink_offset = curr_gap.begin_offset;
+		iov[iov_used].iov_base = blocks_[block_idx]->buffer + off_in_block;
+		size_t iov_len;
+		
+		if (GetBlockIndex(curr_shrink_offset) == block_idx) {
+			// read until gap
+			iov_len = GetInBlockOffset(curr_shrink_offset);
+			// skip to after gap
+			curr_offset = curr_gap.end_offset;
+		} else {
+			// we read until end of block, proceed.
+			iov_len = GetBlockCapacity(block_idx);
+			curr_offset += iov_len;
+			block_idx = (block_idx + 1) % blocks_count_;
+		}
+		iov[iov_used].iov_len = iov_len;
+		iov_used++;
+	}
+	
+	// read until last block
+	while (block_idx < end_block_idx) {
+		if (iov_used >= iov_count) {
+			break;
+		}
+		size_t off_in_block = GetInBlockOffset(curr_offset); // will be 0 from 2nd block
+		iov[iov_used].iov_base = blocks_[block_idx]->buffer + off_in_block;
+		iov[iov_used].iov_len = GetBlockCapacity(block_idx) - off_in_block;
+		curr_offset += iov[iov_used].iov_len;
+		block_idx = (block_idx + 1) % blocks_count_;
+		iov_used++;
+	}
+
+
+	// Deal with last block if |iov| can hold more.
+	if (iov_used < iov_count) {
+		size_t off_in_block = GetInBlockOffset(curr_offset); // for cases of a single block
+		DCHECK_NE(static_cast<BufferBlock*>(nullptr), blocks_[block_idx]);
+		iov[iov_used].iov_base = blocks_[end_block_idx]->buffer + off_in_block;
+		iov[iov_used].iov_len = end_block_offset + 1 - off_in_block;
+		DVLOG(1) << "Got last block with index: " << end_block_idx;
+		++iov_used;
+	}
+	return iov_used;
 }
 
 bool QuicStreamSequencerBuffer::GetReadableRegion(iovec* iov,
@@ -438,9 +522,7 @@ bool QuicStreamSequencerBuffer::MarkConsumed(size_t bytes_used) {
   size_t bytes_to_consume = bytes_used;
   while (bytes_to_consume > 0) {
     size_t block_idx = NextBlockToRead();
-    size_t offset_in_block = ReadOffset();
-    size_t bytes_available = min<size_t>(
-        ReadableBytes(), GetBlockCapacity(block_idx) - offset_in_block);
+    size_t bytes_available = BytesAvailableInBlock();
     size_t bytes_read = min<size_t>(bytes_to_consume, bytes_available);
     total_bytes_read_ += bytes_read;
     num_bytes_buffered_ -= bytes_read;
@@ -474,7 +556,7 @@ void QuicStreamSequencerBuffer::ReleaseWholeBuffer() {
 }
 
 size_t QuicStreamSequencerBuffer::ReadableBytes() const {
-  return gaps_.front().begin_offset - total_bytes_read_;
+  return gaps_.front().begin_offset - total_bytes_read_ - total_bytes_shrank_;
 }
 
 bool QuicStreamSequencerBuffer::HasBytesToRead() const {
@@ -507,10 +589,30 @@ size_t QuicStreamSequencerBuffer::NextBlockToRead() const {
 }
 
 bool QuicStreamSequencerBuffer::RetireBlockIfEmpty(size_t block_index) {
-  DCHECK(ReadableBytes() == 0 || GetInBlockOffset(total_bytes_read_) == 0)
+	// If reached end of block or shrank gap
+  DCHECK(ReadableBytes() == 0 || GetInBlockOffset(total_bytes_read_) == 0 || (total_bytes_shrank_ && (gaps_shrank_.front().begin_offset - total_bytes_read_ == 0)))
       << "RetireBlockIfEmpty() should only be called when advancing to next "
          "block"
          " or a gap has been reached.";
+
+  // check if got to shrank gap
+  if (total_bytes_shrank_ && (gaps_shrank_.front().begin_offset == total_bytes_read_)) {
+	  // shrank gap inside cur block. skip it and remove it
+	  size_t bytes_to_advance = (gaps_shrank_.front().end_offset - gaps_shrank_.front().begin_offset);
+	  total_bytes_shrank_ -= bytes_to_advance;
+	  gaps_shrank_.pop_front();
+	  total_bytes_read_ += bytes_to_advance;
+
+	  if (NextBlockToRead() == block_index) {
+		  // the gap was inside this block. dont retire it
+		  return true;
+	  }
+	  // if we didn't read at all, just need to skip gap
+	  if (blocks_[block_index] == nullptr) {
+		  return true;
+	  }
+  }
+
   // If the whole buffer becomes empty, the last piece of data has been read.
   if (Empty()) {
     return RetireBlock(block_index);
@@ -604,6 +706,21 @@ string QuicStreamSequencerBuffer::ReceivedFramesDebugString() {
     }
   }
   return current_frames_string;
+}
+
+void QuicStreamSequencerBuffer::Shrink()
+{
+	std::list<Gap>::iterator current_gap = gaps_.begin();
+	
+	for (const auto current_gap : gaps_) {
+		// don't shrink last
+		if (current_gap.end_offset != std::numeric_limits<QuicStreamOffset>::max()) {
+			gaps_shrank_.push_back(current_gap);
+			total_bytes_shrank_ += current_gap.end_offset - current_gap.begin_offset;
+		}
+	}
+	gaps_ = std::list<Gap>(
+		1, Gap(gaps_.back().begin_offset, std::numeric_limits<QuicStreamOffset>::max()));
 }
 
 }  //  namespace net

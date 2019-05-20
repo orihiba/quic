@@ -776,9 +776,9 @@ void QuicNormalStream::OnStreamFrame(const QuicStreamFrame& frame) {
 
 	QuicNormalSession *cur_session = (QuicNormalSession*)session();
 
-	if (frame.fin || cur_session->fifo_session()) {
+	//if (frame.fin || cur_session->fifo_session()) {
 		cur_session->AddRedableStream(this);
-	}
+	//}
 }
 
 void QuicNormalStream::OnFinRead()
@@ -810,6 +810,11 @@ void QuicNormalStream::WriteOrBufferData(
 	} else {
 		ReliableQuicStream::WriteOrBufferData(data, fin, ack_listener);
 	}
+}
+
+void QuicNormalStream::Shrink()
+{
+	sequencer()->Shrink();
 }
 
 }  // namespace net

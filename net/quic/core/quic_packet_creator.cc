@@ -492,8 +492,9 @@ void QuicPacketCreator::ReserializeAllFrames(
 	  QuicPacketHeader temp_header;
 	  temp_header.public_header.connection_id = 0x1337;
 	  temp_header.fec_configuration = retransmission.fec_configuration;;
-	  temp_header.fec_group = retransmission.fec_group;;
+	  temp_header.fec_group = retransmission.fec_group;
 	  temp_header.offset_in_fec_group = retransmission.offset_in_fec_group;;
+	  temp_header.is_in_fec_group = retransmission.is_in_fec_group;
 
 	  SerializePacket(buffer, buffer_len, temp_header);
 	  packet_.original_path_id = retransmission.path_id;
@@ -739,6 +740,7 @@ void QuicPacketCreator::SerializePacket(char* encrypted_buffer,
 	header.fec_group = input_header.fec_group;
 	header.offset_in_fec_group = input_header.offset_in_fec_group;
 	header.fec_configuration = input_header.fec_configuration;
+	header.is_in_fec_group = input_header.is_in_fec_group;
   } else if (fec_group_.get() != nullptr) {
 	  DCHECK_NE(0u, header.fec_group);
 	  header.offset_in_fec_group = fec_group_->NumSentPackets();
@@ -749,6 +751,7 @@ void QuicPacketCreator::SerializePacket(char* encrypted_buffer,
   packet_.fec_group = header.fec_group;
   packet_.fec_configuration = header.fec_configuration;
   packet_.is_fec_packet = header.fec_flag;
+  packet_.is_in_fec_group = header.is_in_fec_group;
 
   MaybeAddPadding();
 

@@ -26,6 +26,7 @@ FecConfiguration current_fec_configuration = FEC_OFF; // defualt
 bool useFec = false;
 bool useRetransmission = true;
 bool highQuality = false;
+size_t lostBytesDelta = 0xffffffffffffffff;
 
 void initCommandlineArgs()
 {
@@ -905,7 +906,8 @@ SerializedPacket::SerializedPacket(QuicPathId path_id,
 	  raw_data_len(0),
 	  fec_group(0),
 	  fec_configuration(FEC_OFF),
-	  offset_in_fec_group(0) {}
+	  offset_in_fec_group(0),
+	  is_in_fec_group(NOT_IN_FEC_GROUP) {}
 
 SerializedPacket::SerializedPacket(const SerializedPacket& other) = default;
 
@@ -934,6 +936,7 @@ TransmissionInfo::TransmissionInfo(EncryptionLevel level,
 									QuicFecGroupNumber fec_group,
 									FecConfiguration fec_configuration,
 									uint8_t offset_in_fec_group,
+									InFecGroup is_in_fec_group,
 									const char *fec_buffer_,
 									QuicPacketLength fec_buffer_len)
     : encryption_level(level),
@@ -950,6 +953,7 @@ TransmissionInfo::TransmissionInfo(EncryptionLevel level,
 	fec_group(fec_group),
 	fec_configuration(fec_configuration),
 	offset_in_fec_group(offset_in_fec_group),
+	is_in_fec_group(is_in_fec_group),
 	fec_buffer_len(fec_buffer_len)
 {
 	if (fec_buffer_ != nullptr) {

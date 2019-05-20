@@ -131,6 +131,8 @@ class NET_EXPORT_PRIVATE QuicStreamSequencerBuffer {
                       size_t* bytes_read,
                       std::string* error_details);
 
+  QuicStreamOffset ReadbleOffsetEnd() const;
+
   // Returns the readable region of valid data in iovec format. The readable
   // region is the buffer region where there is valid data not yet read by
   // client.
@@ -172,6 +174,8 @@ class NET_EXPORT_PRIVATE QuicStreamSequencerBuffer {
     return reduce_sequencer_buffer_memory_life_time_;
   }
 
+  void Shrink();
+
  private:
   friend class test::QuicStreamSequencerBufferPeer;
 
@@ -185,7 +189,7 @@ class NET_EXPORT_PRIVATE QuicStreamSequencerBuffer {
   // block or a gap has been reached.
   // If the block at |block_index| contains no buffered data, the block
   // should be retired.
-  // Return false on success, or false otherwise.
+  // Return true on success, or false otherwise.
   bool RetireBlockIfEmpty(size_t block_index);
 
   // Called within OnStreamData() to update the gap OnStreamData() writes into
@@ -229,6 +233,8 @@ class NET_EXPORT_PRIVATE QuicStreamSequencerBuffer {
   // GapsDebugString();
   std::string ReceivedFramesDebugString();
 
+  size_t BytesAvailableInBlock();
+
   // The maximum total capacity of this buffer in byte, as constructed.
   const size_t max_buffer_capacity_bytes_;
 
@@ -238,8 +244,12 @@ class NET_EXPORT_PRIVATE QuicStreamSequencerBuffer {
   // Number of bytes read out of buffer.
   QuicStreamOffset total_bytes_read_;
 
+  QuicStreamOffset total_bytes_shrank_;
+
   // Contains Gaps which represents currently missing data.
   std::list<Gap> gaps_;
+
+  std::list<Gap> gaps_shrank_;
 
   // If true, allocate buffer memory upon the first frame arrival and release
   // the memory when stream is read closed.

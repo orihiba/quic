@@ -85,6 +85,7 @@ NET_EXPORT_PRIVATE extern FecConfiguration current_fec_configuration;
 NET_EXPORT_PRIVATE extern bool useFec;				// true if the program uses fec (can be enabled by user)
 NET_EXPORT_PRIVATE extern bool useRetransmission;	// true if the program uses retransmission (can be disabled by user) -- not used
 NET_EXPORT_PRIVATE extern bool highQuality;			// true if the program uses retransmission during FEC
+NET_EXPORT_PRIVATE extern size_t lostBytesDelta;
 
 void initCommandlineArgs();
 
@@ -1561,6 +1562,7 @@ struct NET_EXPORT_PRIVATE SerializedPacket {
   QuicFecGroupNumber fec_group;
   FecConfiguration fec_configuration;
   uint8_t offset_in_fec_group;
+  InFecGroup is_in_fec_group;
   // Optional notifiers which will be informed when this packet has been ACKed.
   std::list<AckListenerWrapper> listeners;
 };
@@ -1582,6 +1584,7 @@ struct NET_EXPORT_PRIVATE TransmissionInfo {
 				QuicFecGroupNumber fec_group,
 			FecConfiguration fec_configuration,
 			uint8_t offset_in_fec_group,
+			InFecGroup is_in_fec_group,
 			  const char *fec_buffer_,
 			  QuicPacketLength fec_buffer_len);
 
@@ -1618,6 +1621,7 @@ struct NET_EXPORT_PRIVATE TransmissionInfo {
   QuicFecGroupNumber fec_group;
   FecConfiguration fec_configuration;
   uint8_t offset_in_fec_group;
+  InFecGroup is_in_fec_group;
   char fec_buffer[kMaxPacketSize];
 
   QuicPacketLength fec_buffer_len;
@@ -1636,6 +1640,7 @@ struct PendingRetransmission {
 						QuicFecGroupNumber fec_group = 0,
 						FecConfiguration fec_configuration = FEC_OFF,
 						uint8_t offset_in_fec_group = 0,
+						InFecGroup is_in_fec_group = NOT_IN_FEC_GROUP,
 						  const char *fec_buffer_ = nullptr,
 						  QuicPacketLength fec_buffer_len = 0)
       : packet_number(packet_number),
@@ -1649,6 +1654,7 @@ struct PendingRetransmission {
 	  fec_group(fec_group),
 	  fec_configuration(fec_configuration),
 	  offset_in_fec_group(offset_in_fec_group),
+	  is_in_fec_group(is_in_fec_group),
 	  fec_buffer_len(fec_buffer_len)
   {
 	  if (fec_buffer_ != nullptr) {
@@ -1667,6 +1673,7 @@ struct PendingRetransmission {
   QuicFecGroupNumber fec_group;
   FecConfiguration fec_configuration;
   uint8_t offset_in_fec_group;
+  InFecGroup is_in_fec_group;
   char fec_buffer[kMaxPacketSize];
   QuicPacketLength fec_buffer_len;
 };

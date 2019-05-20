@@ -56,7 +56,7 @@ private:
 	bool is_fifo_;
 	int sendInner(size_t connection_id, const char * data, size_t len, bool end_of_message);
 public:
-	QuicrServer(const char * local_ip, uint16_t port, unsigned int flags = FLAGS_NONE, size_t max_delay = 0);
+	QuicrServer(const char * local_ip, uint16_t port, unsigned int flags = FLAGS_NONE, size_t max_delay = 0, size_t lost_bytes_delta = 0x10000);
 	size_t accept();
 	int send(size_t connection_id, const char *data, size_t len, bool end_of_message);
 	int send(size_t connection_id, const char * data, size_t len);
@@ -78,7 +78,7 @@ bool listenSocket(char * local_ip, uint16_t port);
 
 void server2()
 {
-	QuicrServer quicr_server("0.0.0.0", 6121, FLAGS_HIGH_QUALITY);
+	QuicrServer quicr_server("0.0.0.0", 6121, FLAGS_NONE);
 	size_t connection_id = quicr_server.accept();
 	//connection_id = quicr_accept();
 	
@@ -291,7 +291,7 @@ bool initFec(uint16_t k, uint16_t m)
 class SerevrThread
 	: public base::PlatformThread::Delegate {
 public:
-	SerevrThread(const char * _local_ip, uint16_t _port, net::QuicNormalServer **_server, base::WaitableEvent *_session_event, base::TaskRunner **_task_runner, bool _is_fifo, size_t _max_delay, bool _high_quality) : local_ip(_local_ip), port(_port), server(_server), session_event(_session_event), task_runner(_task_runner), is_fifo(_is_fifo), max_delay(_max_delay), high_quality(_high_quality){}
+	SerevrThread(const char * _local_ip, uint16_t _port, net::QuicNormalServer **_server, base::WaitableEvent *_session_event, base::TaskRunner **_task_runner, bool _is_fifo, size_t _max_delay, size_t _lost_bytes_delta, bool _high_quality) : local_ip(_local_ip), port(_port), server(_server), session_event(_session_event), task_runner(_task_runner), is_fifo(_is_fifo), max_delay(_max_delay), lost_bytes_delta(_lost_bytes_delta), high_quality(_high_quality){}
 	base::WaitableEvent *get_session_event() { return session_event; }
 	virtual ~SerevrThread() = default;
 private:
@@ -302,6 +302,7 @@ private:
 	base::TaskRunner **task_runner;
 	bool is_fifo;
 	size_t max_delay;
+	size_t lost_bytes_delta;
 	bool high_quality;
 
 	void ThreadMain() override {
@@ -338,6 +339,7 @@ private:
 			session_event,
 			is_fifo,
 			max_delay,
+			lost_bytes_delta,
 			high_quality);
 
 		(*server)->SetStrikeRegisterNoStartupPeriod();
@@ -358,7 +360,7 @@ void send_data(net::QuicNormalServerSessionBase *session, const char *data, size
 }
 
 //extern "C" EXPORT
-QuicrServer::QuicrServer(const char * local_ip, uint16_t port, unsigned int flags, size_t max_delay)
+QuicrServer::QuicrServer(const char * local_ip, uint16_t port, unsigned int flags, size_t max_delay, size_t lost_bytes_delta)
 {
 	is_fifo_ = (flags & FLAGS_FIFO) != 0;
 	bool high_quality = (flags & FLAGS_HIGH_QUALITY) != 0;
@@ -367,7 +369,7 @@ QuicrServer::QuicrServer(const char * local_ip, uint16_t port, unsigned int flag
 		base::WaitableEvent::InitialState::NOT_SIGNALED);
 	static base::PlatformThreadHandle thread_handle;
 	//static SerevrThread delegate(local_ip, port, &server, session_event, &task_runner, is_fifo);
-	std::unique_ptr<SerevrThread> delegate(new SerevrThread(local_ip, port, &server, session_event, &task_runner, is_fifo_, max_delay, high_quality));
+	std::unique_ptr<SerevrThread> delegate(new SerevrThread(local_ip, port, &server, session_event, &task_runner, is_fifo_, max_delay, lost_bytes_delta, high_quality));
 	
 	if (thread_handle.is_null()) {
 		base::PlatformThread::Create(0, delegate.get(), &thread_handle);

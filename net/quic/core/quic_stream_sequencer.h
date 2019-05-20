@@ -103,6 +103,8 @@ class NET_EXPORT_PRIVATE QuicStreamSequencer {
   // Returns std::string describing internal state.
   const std::string DebugString() const;
 
+  void Shrink();
+
  private:
   friend class test::QuicStreamSequencerPeer;
 

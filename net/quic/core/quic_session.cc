@@ -869,7 +869,8 @@ int QuicNormalSession::ReadData(char *buffer, size_t len)
 			return stream->ReadFifo(buffer, len);
 		}
 	} else { // non fifo
-		if (stream->fin_received()) {
+		// if (stream->fin_received()) {
+		if (stream->HasBytesToRead() ) { // need to read when done or when received enough bytes
 			return stream->Read(buffer, len);
 		}
 	}
@@ -897,6 +898,13 @@ void QuicNormalSession::CloseStreamInner(QuicStreamId stream_id, bool locally_re
 	ReliableQuicStream* stream = it->second;
 	RemoveRedableStream((QuicNormalStream*)stream);
 	QuicSession::CloseStreamInner(stream_id, locally_reset);
+}
+
+void QuicNormalSession::ShrinkStreams() const
+{
+	for (const auto stream : readable_stream_map_) {
+		stream.second->Shrink();
+	}
 }
 
 }  // namespace net

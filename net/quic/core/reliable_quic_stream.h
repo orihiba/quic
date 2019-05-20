@@ -395,7 +395,7 @@ public:
 
 	const std::string& data() const { return data_; }
 	const uint32_t bytes_remaining() const { return bytes_remaining_; }
-
+	void Shrink();
 protected:
 	
 	QuicSession* session() const { return session_; }

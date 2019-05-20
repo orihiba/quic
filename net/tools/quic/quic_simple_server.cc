@@ -214,6 +214,7 @@ QuicNormalServer::QuicNormalServer(
 	base::WaitableEvent *session_event,
 	bool is_fifo,
 	size_t max_delay,
+	size_t lost_bytes_delta,
 	bool high_quality)
 	: version_manager_(supported_versions),
 	helper_(
@@ -233,7 +234,8 @@ QuicNormalServer::QuicNormalServer(
 	data_arr(),
 	weak_factory_(this),
 	is_fifo_(is_fifo),
-	max_delay_(max_delay) {
+	max_delay_(max_delay), 
+	lost_bytes_delta_(lost_bytes_delta) {
 	highQuality = high_quality;
 		data_event_ = new base::WaitableEvent(base::WaitableEvent::ResetPolicy::AUTOMATIC,
 			base::WaitableEvent::InitialState::NOT_SIGNALED);

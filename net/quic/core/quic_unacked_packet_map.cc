@@ -54,7 +54,7 @@ void QuicUnackedPacketMap::AddSentPacket(SerializedPacket* packet,
   TransmissionInfo info(packet->encryption_level, packet->packet_number_length,
                         transmission_type, sent_time, bytes_sent,
                         has_crypto_handshake, packet->num_padding_bytes, packet->is_fec_packet, 
-						packet->fec_group, packet->fec_configuration, packet->offset_in_fec_group, packet->is_fec_packet ? packet->raw_data : nullptr, packet->raw_data_len);
+						packet->fec_group, packet->fec_configuration, packet->offset_in_fec_group, packet->is_in_fec_group, packet->is_fec_packet ? packet->raw_data : nullptr, packet->raw_data_len);
   if (old_packet_number > 0) {
     TransferRetransmissionInfo(old_packet_number, packet_number,
                                transmission_type, &info);

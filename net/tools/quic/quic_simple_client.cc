@@ -187,7 +187,8 @@ QuicNormalClient::QuicNormalClient(
 	std::unique_ptr<ProofVerifier> proof_verifier,
 	bool is_fifo,
 	bool high_quality,
-	size_t max_delay)
+	size_t max_delay,
+	size_t lost_bytes_delta)
 	: QuicNormalClient(server_address,
 		server_id,
 		supported_versions,
@@ -195,7 +196,8 @@ QuicNormalClient::QuicNormalClient(
 		std::move(proof_verifier),
 		is_fifo,
 		high_quality,
-		max_delay) {}
+		max_delay,
+		lost_bytes_delta) {}
 
 QuicNormalClient::QuicNormalClient(
 	IPEndPoint server_address,
@@ -205,7 +207,8 @@ QuicNormalClient::QuicNormalClient(
 	std::unique_ptr<ProofVerifier> proof_verifier,
 	bool is_fifo,
 	bool high_quality,
-	size_t max_delay)
+	size_t max_delay,
+	size_t lost_bytes_delta)
 	: QuicNormalClientBase(server_id,
 		supported_versions,
 		config,
@@ -213,7 +216,8 @@ QuicNormalClient::QuicNormalClient(
 		CreateQuicAlarmFactory(),
 		std::move(proof_verifier),
 		is_fifo,
-		max_delay),
+		max_delay,
+		lost_bytes_delta),
 	initialized_(false),
 	packet_reader_started_(false),
 	weak_factory_(this) {

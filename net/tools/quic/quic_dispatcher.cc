@@ -1587,6 +1587,7 @@ void QuicDispatcher2::ProcessChlo() {
 		CreateQuicSession(current_connection_id_, current_client_address_);
 	session->SetFifoSession(server_->is_fifo());
 	session->SetMaxDelay(server_->max_delay());
+	lostBytesDelta = server_->lost_bytes_delta();
 	DVLOG(1) << "Created new session for " << current_connection_id_;
 	session_map_.insert(std::make_pair(current_connection_id_, session));
 	std::list<BufferedPacket> packets =

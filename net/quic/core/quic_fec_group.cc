@@ -93,7 +93,9 @@ std::string * appendLenToPayload(StringPiece payload, QuicPacketHeader header)
 	unsigned short ext_payload_len = payload_len | (packet_number_len << 14);
 
 	size_t diff_from_group_idx = packet_number - fec_group - offset_in_fec_group;
-	DCHECK_LE(diff_from_group_idx, 0xff); // make sure 1 byte is enough
+	if (diff_from_group_idx > 0xff) { // make sure 1 byte is enough
+		return nullptr;
+	}
 
 	VLOG(2) << "Packing packet number " << packet_number << " with len " << payload_len;
 
@@ -114,7 +116,11 @@ bool QuicFecGroup::UpdateSentList(EncryptionLevel encryption_level,
 	DCHECK_NE(kInvalidPacketNumber, header.packet_number);
 	
 	// add the packet size to the beginning of the packet, and add it to the list
-	ParityPacket * packet = new ParityPacket(header.packet_number, std::move(*appendLenToPayload(decrypted_payload, header)), header.public_header.packet_number_length, header.offset_in_fec_group);
+	auto payload_ptr = appendLenToPayload(decrypted_payload, header);
+	if (payload_ptr == nullptr) {
+		return false;
+	}
+	ParityPacket * packet = new ParityPacket(header.packet_number, std::move(*payload_ptr), header.public_header.packet_number_length, header.offset_in_fec_group);
 	parity_sent_packets_.push_back(packet);
 	DVLOG(1) << "Sending! Saving packet number " << header.packet_number;
 
@@ -156,7 +162,11 @@ bool QuicFecGroup::UpdateReceivedList(EncryptionLevel encryption_level,
   std::string payloadToSave = decrypted_payload.as_string();
   if (!is_fec_data)
   {
-	  payloadToSave = *appendLenToPayload(payloadToSave, header);
+	  auto payload_ptr = appendLenToPayload(payloadToSave, header);
+	  if (payload_ptr == nullptr) { // if fec is bad for this packet
+		  return false;
+	  }
+	  payloadToSave = *payload_ptr;
   } else {
 	  fec_packets_number++;
   }

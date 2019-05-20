@@ -519,7 +519,8 @@ public:
 		QuicAlarmFactory* alarm_factory,
 		std::unique_ptr<ProofVerifier> proof_verifier,
 		bool is_fifo,
-		size_t max_delay);
+		size_t max_delay,
+		size_t lost_bytes_delta);
 
 	~QuicNormalClientBase() override;
 
@@ -916,6 +917,7 @@ private:
 
 	bool is_fifo_;
 	size_t max_delay_;
+	size_t lost_bytes_delta_;
 
 	DISALLOW_COPY_AND_ASSIGN(QuicNormalClientBase);
 };
