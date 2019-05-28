@@ -244,7 +244,7 @@ QuicErrorCode QuicStreamSequencerBuffer::OnStreamData(
       std::make_pair(starting_offset, FrameInfo(size, timestamp)));
   num_bytes_buffered_ += total_written;
 
-  if (useFec && !highQuality) {
+  if (useFec && !losslessConnection) {
 	  size_t max_byte_written = gaps_.back().begin_offset - 1;
 	  size_t first_lost_byte = gaps_.front().begin_offset;
 	  if (gaps_.size() > 1 && (max_byte_written - first_lost_byte > lostBytesDelta)) {
@@ -437,12 +437,12 @@ int QuicStreamSequencerBuffer::GetReadableRegions(struct iovec* iov,
 		
 		if (GetBlockIndex(curr_shrink_offset) == block_idx) {
 			// read until gap
-			iov_len = GetInBlockOffset(curr_shrink_offset);
+			iov_len = GetInBlockOffset(curr_shrink_offset) - off_in_block; // TODO check the minus
 			// skip to after gap
 			curr_offset = curr_gap.end_offset;
 		} else {
 			// we read until end of block, proceed.
-			iov_len = GetBlockCapacity(block_idx);
+			iov_len = GetBlockCapacity(block_idx) - off_in_block;
 			curr_offset += iov_len;
 			block_idx = (block_idx + 1) % blocks_count_;
 		}

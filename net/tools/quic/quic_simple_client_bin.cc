@@ -136,7 +136,7 @@ class QuicrClient
 {
 private:
 	bool is_fifo_;
-	bool high_quality_;
+	bool lossless_;
 	size_t max_delay_;
 	size_t lost_bytes_delta_;
 	int sendInner(char * data, size_t len, bool end_of_message);
@@ -635,7 +635,7 @@ size_t sendRequest(char * name, char * output)
 QuicrClient::QuicrClient(unsigned int flags, size_t max_delay, size_t lost_bytes_delta) : max_delay_(max_delay), lost_bytes_delta_(lost_bytes_delta)
 {
 	is_fifo_ = (flags & FLAGS_FIFO) != 0;
-	high_quality_ = (flags & FLAGS_HIGH_QUALITY) != 0;
+	lossless_ = (flags & FLAGS_LOSSLESS) != 0;
 }
 
 //extern "C" EXPORT
@@ -679,7 +679,7 @@ bool QuicrClient::connect(const char * host, uint16_t port)
 			ct_verifier.get()));
 	std::unique_ptr<net::QuicNormalClient> client(
 		new net::QuicNormalClient(net::IPEndPoint(ip_addr, port), server_id,
-			versions, std::move(proof_verifier), is_fifo_, high_quality_, max_delay_, lost_bytes_delta_));
+			versions, std::move(proof_verifier), is_fifo_, lossless_, max_delay_, lost_bytes_delta_));
 	client->set_initial_max_packet_length(net::kDefaultMaxPacketSize);
 	if (!client->Initialize()) {
 		cerr << "Failed to initialize client." << endl;

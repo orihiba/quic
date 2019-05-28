@@ -85,7 +85,8 @@ class NET_EXPORT_PRIVATE QuicSession : public QuicConnectionVisitorInterface {
   bool WillingAndAbleToWrite() const override;
   bool HasPendingHandshake() const override;
   bool HasOpenDynamicStreams() const override;
-  void ShrinkStreams() const override {};
+  void ShrinkStreams(bool should_shrink) const override {};
+  bool CanShrink() const override { return false; }
   void OnPathDegrading() override;
 
   // Called on every incoming packet. Passes |packet| through to |connection_|.
@@ -451,7 +452,8 @@ public:
 
 	bool fifo_session() { return fifo_session_; }
 
-	void ShrinkStreams() const override;
+	void ShrinkStreams(bool should_shrink) const override;
+	bool CanShrink() const override;
 
 private:
 	bool fifo_session_;

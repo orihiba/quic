@@ -869,8 +869,7 @@ int QuicNormalSession::ReadData(char *buffer, size_t len)
 			return stream->ReadFifo(buffer, len);
 		}
 	} else { // non fifo
-		// if (stream->fin_received()) {
-		if (stream->HasBytesToRead() ) { // need to read when done or when received enough bytes
+		if (stream->fin_received()) {
 			return stream->Read(buffer, len);
 		}
 	}
@@ -900,11 +899,24 @@ void QuicNormalSession::CloseStreamInner(QuicStreamId stream_id, bool locally_re
 	QuicSession::CloseStreamInner(stream_id, locally_reset);
 }
 
-void QuicNormalSession::ShrinkStreams() const
+void QuicNormalSession::ShrinkStreams(bool should_shrink) const
 {
 	for (const auto stream : readable_stream_map_) {
-		stream.second->Shrink();
+		if (should_shrink) {
+			stream.second->Shrink();
+		}
+		stream.second->OnFinReadForce();
 	}
+}
+
+bool QuicNormalSession::CanShrink() const
+{
+	for (const auto stream : readable_stream_map_) {
+		if (stream.second->HasBytesToShrink()) {
+			return true;
+		}
+	}
+	return false;
 }
 
 }  // namespace net

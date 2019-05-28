@@ -104,6 +104,7 @@ class NET_EXPORT_PRIVATE QuicStreamSequencer {
   const std::string DebugString() const;
 
   void Shrink();
+  bool HasBytesToShrink() { return buffered_frames_.HasBytesToShrink(); }
 
  private:
   friend class test::QuicStreamSequencerPeer;

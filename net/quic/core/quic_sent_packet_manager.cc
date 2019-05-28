@@ -450,7 +450,7 @@ void QuicSentPacketManager::MarkForRetransmission(
     }
 
 	if (transmission_type != HANDSHAKE_RETRANSMISSION) {
-		if (useFec && !highQuality) {
+		if (useFec && !losslessConnection) {
 			return;
 		}
 	}

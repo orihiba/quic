@@ -215,7 +215,7 @@ QuicNormalServer::QuicNormalServer(
 	bool is_fifo,
 	size_t max_delay,
 	size_t lost_bytes_delta,
-	bool high_quality)
+	bool lossless_connection)
 	: version_manager_(supported_versions),
 	helper_(
 		new QuicChromiumConnectionHelper(&clock_, QuicRandom::GetInstance())),
@@ -236,7 +236,7 @@ QuicNormalServer::QuicNormalServer(
 	is_fifo_(is_fifo),
 	max_delay_(max_delay), 
 	lost_bytes_delta_(lost_bytes_delta) {
-	highQuality = high_quality;
+	losslessConnection = lossless_connection;
 		data_event_ = new base::WaitableEvent(base::WaitableEvent::ResetPolicy::AUTOMATIC,
 			base::WaitableEvent::InitialState::NOT_SIGNALED);
 	Initialize();

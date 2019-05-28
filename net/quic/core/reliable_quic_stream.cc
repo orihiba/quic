@@ -177,6 +177,10 @@ void ReliableQuicStream::OnFinRead() {
   CloseReadSide();
 }
 
+void ReliableQuicStream::OnFinReadForce() {
+	fin_received_ = true;
+}
+
 void ReliableQuicStream::Reset(QuicRstStreamErrorCode error) {
   stream_error_ = error;
   // Sending a RstStream results in calling CloseStream.

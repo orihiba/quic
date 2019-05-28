@@ -176,6 +176,8 @@ class NET_EXPORT_PRIVATE QuicStreamSequencerBuffer {
 
   void Shrink();
 
+  bool HasBytesToShrink() const { return gaps_.size() > 1; }
+
  private:
   friend class test::QuicStreamSequencerBufferPeer;
 

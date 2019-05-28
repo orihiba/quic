@@ -4,7 +4,7 @@ enum config_flags
 {
 	FLAGS_NONE = 0,
 	FLAGS_FIFO = 0x00000001,
-	FLAGS_HIGH_QUALITY = 0x00000002,
+	FLAGS_LOSSLESS = 0x00000002,
 };
 
 #define PRINT_FIELD(X) << #X ":\t" << X << std::endl

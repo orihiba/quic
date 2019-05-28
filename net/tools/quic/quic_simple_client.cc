@@ -186,7 +186,7 @@ QuicNormalClient::QuicNormalClient(
 	const QuicVersionVector& supported_versions,
 	std::unique_ptr<ProofVerifier> proof_verifier,
 	bool is_fifo,
-	bool high_quality,
+	bool lossless_connection,
 	size_t max_delay,
 	size_t lost_bytes_delta)
 	: QuicNormalClient(server_address,
@@ -195,7 +195,7 @@ QuicNormalClient::QuicNormalClient(
 		QuicConfig(),
 		std::move(proof_verifier),
 		is_fifo,
-		high_quality,
+		lossless_connection,
 		max_delay,
 		lost_bytes_delta) {}
 
@@ -206,7 +206,7 @@ QuicNormalClient::QuicNormalClient(
 	const QuicConfig& config,
 	std::unique_ptr<ProofVerifier> proof_verifier,
 	bool is_fifo,
-	bool high_quality,
+	bool lossless_connection,
 	size_t max_delay,
 	size_t lost_bytes_delta)
 	: QuicNormalClientBase(server_id,
@@ -221,7 +221,7 @@ QuicNormalClient::QuicNormalClient(
 	initialized_(false),
 	packet_reader_started_(false),
 	weak_factory_(this) {
-	highQuality = high_quality;
+	losslessConnection = lossless_connection;
 	set_server_address(server_address);
 }
 

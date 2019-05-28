@@ -169,6 +169,19 @@ private:
 	DISALLOW_COPY_AND_ASSIGN(IdleTimeoutAlarmDelegate);
 };
 
+class FasterIdleTimeoutAlarmDelegate : public QuicAlarm::Delegate {
+public:
+	explicit FasterIdleTimeoutAlarmDelegate(QuicConnection* connection)
+		: connection_(connection) {}
+
+	void OnAlarm() override { connection_->CheckForFasterIdleTimeout(); }
+
+private:
+	QuicConnection* connection_;
+
+	DISALLOW_COPY_AND_ASSIGN(FasterIdleTimeoutAlarmDelegate);
+};
+
 class PingAlarmDelegate : public QuicAlarm::Delegate {
  public:
   explicit PingAlarmDelegate(QuicConnection* connection)
@@ -283,6 +296,9 @@ QuicConnection::QuicConnection(QuicConnectionId connection_id,
 	idle_timeout_alarm_(
 		alarm_factory_->CreateAlarm(arena_.New<IdleTimeoutAlarmDelegate>(this),
 			&arena_)),
+	faster_idle_timeout_alarm_(
+		alarm_factory_->CreateAlarm(arena_.New<FasterIdleTimeoutAlarmDelegate>(this),
+			&arena_)),
       ping_alarm_(
           alarm_factory_->CreateAlarm(arena_.New<PingAlarmDelegate>(this),
                                       &arena_)),
@@ -302,7 +318,8 @@ QuicConnection::QuicConnection(QuicConnectionId connection_id,
 	peek_active_time_(QuicTime::Delta::FromSeconds(2)),
 peek_idle_time_(QuicTime::Delta::FromSeconds(2)),
 	idle_network_timeout_(QuicTime::Delta::Infinite()),
-	new_idle_network_timeout_(QuicTime::Delta::FromSeconds(kInitialIdleTimeoutSecs)),
+	new_idle_network_timeout_(QuicTime::Delta::FromSeconds(kInitialIdleTimeoutSecs + 10)),
+	new_faster_idle_network_timeout_(QuicTime::Delta::FromSeconds(kInitialIdleTimeoutSecs)),
       handshake_timeout_(QuicTime::Delta::Infinite()),
       time_of_last_received_packet_(clock_->ApproximateNow()),
       time_of_last_sent_new_packet_(clock_->ApproximateNow()),
@@ -1523,6 +1540,9 @@ void QuicConnection::ProcessUdpPacket(const IPEndPoint& self_address,
                                       const QuicReceivedPacket& packet) {
 	static int number_of_packets = 1;
 	idle_timeout_alarm_->Update(clock_->ApproximateNow() + new_idle_network_timeout_, QuicTime::Delta::Zero());
+	if (!losslessConnection) {
+		faster_idle_timeout_alarm_->Update(clock_->ApproximateNow() + new_faster_idle_network_timeout_, QuicTime::Delta::Zero());
+	}
 
   if (!connected_) {
     return;
@@ -2429,7 +2449,7 @@ QuicFecGroup* QuicConnection::GetFecGroup() {
 		}
 		VLOG(2) << "fec_configuration: " << last_header_.fec_configuration << " for group: " << fec_group_num;
 		group_map_[fec_group_num] = new QuicFecGroup(fec_group_num, last_header_.fec_configuration);
-		/*if (useFec && !highQuality) {
+		/*if (useFec && !losslessConnection) {
 			visitor_->ShrinkStreams();
 		}*/
 	}
@@ -2615,6 +2635,17 @@ void QuicConnection::CheckForIdleTimeout()
 			idle_timeout_connection_close_behavior_);
 		return;
 	}
+}
+
+void QuicConnection::CheckForFasterIdleTimeout()
+{
+	QuicTime now = clock_->ApproximateNow();
+	QuicTime::Delta idle_duration = now - time_of_last_received_packet_;
+	if (idle_duration >= new_faster_idle_network_timeout_) {
+		visitor_->ShrinkStreams(visitor_->CanShrink());
+	}
+	faster_idle_timeout_alarm_->Update(now + new_faster_idle_network_timeout_, QuicTime::Delta::Zero());
+
 }
 
 void QuicConnection::CheckForTimeout() {

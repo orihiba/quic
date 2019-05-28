@@ -189,6 +189,8 @@ class NET_EXPORT_PRIVATE ReliableQuicStream {
                          bool fin,
                          QuicAckListenerInterface* ack_listener);
 
+  void OnFinReadForce();
+
    protected:
   // Sends as many bytes in the first |count| buffers of |iov| to the connection
   // as the connection will consume.
@@ -396,6 +398,7 @@ public:
 	const std::string& data() const { return data_; }
 	const uint32_t bytes_remaining() const { return bytes_remaining_; }
 	void Shrink();
+	bool HasBytesToShrink() { return sequencer()->HasBytesToShrink(); }
 protected:
 	
 	QuicSession* session() const { return session_; }

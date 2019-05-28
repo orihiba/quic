@@ -25,7 +25,7 @@ size_t kDefaultRecoveryBlocksCount = 10;	// default m=10
 FecConfiguration current_fec_configuration = FEC_OFF; // defualt
 bool useFec = false;
 bool useRetransmission = true;
-bool highQuality = false;
+bool losslessConnection = false;
 size_t lostBytesDelta = 0xffffffffffffffff;
 
 void initCommandlineArgs()
@@ -53,9 +53,9 @@ void initCommandlineArgs()
 		useRetransmission = false;
 	}
 
-	if (command_line->HasSwitch("high_quality"))
+	if (command_line->HasSwitch("lossless_connection"))
 	{
-		highQuality = true;
+		losslessConnection = true;
 	}
 	
 }

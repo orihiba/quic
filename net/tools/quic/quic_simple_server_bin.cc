@@ -291,7 +291,7 @@ bool initFec(uint16_t k, uint16_t m)
 class SerevrThread
 	: public base::PlatformThread::Delegate {
 public:
-	SerevrThread(const char * _local_ip, uint16_t _port, net::QuicNormalServer **_server, base::WaitableEvent *_session_event, base::TaskRunner **_task_runner, bool _is_fifo, size_t _max_delay, size_t _lost_bytes_delta, bool _high_quality) : local_ip(_local_ip), port(_port), server(_server), session_event(_session_event), task_runner(_task_runner), is_fifo(_is_fifo), max_delay(_max_delay), lost_bytes_delta(_lost_bytes_delta), high_quality(_high_quality){}
+	SerevrThread(const char * _local_ip, uint16_t _port, net::QuicNormalServer **_server, base::WaitableEvent *_session_event, base::TaskRunner **_task_runner, bool _is_fifo, size_t _max_delay, size_t _lost_bytes_delta, bool _lossless_connection) : local_ip(_local_ip), port(_port), server(_server), session_event(_session_event), task_runner(_task_runner), is_fifo(_is_fifo), max_delay(_max_delay), lost_bytes_delta(_lost_bytes_delta), lossless_connection(_lossless_connection){}
 	base::WaitableEvent *get_session_event() { return session_event; }
 	virtual ~SerevrThread() = default;
 private:
@@ -303,7 +303,7 @@ private:
 	bool is_fifo;
 	size_t max_delay;
 	size_t lost_bytes_delta;
-	bool high_quality;
+	bool lossless_connection;
 
 	void ThreadMain() override {
 		std::cout << "In listenSocket thread" << std::endl;
@@ -340,7 +340,7 @@ private:
 			is_fifo,
 			max_delay,
 			lost_bytes_delta,
-			high_quality);
+			lossless_connection);
 
 		(*server)->SetStrikeRegisterNoStartupPeriod();
 
@@ -363,13 +363,13 @@ void send_data(net::QuicNormalServerSessionBase *session, const char *data, size
 QuicrServer::QuicrServer(const char * local_ip, uint16_t port, unsigned int flags, size_t max_delay, size_t lost_bytes_delta)
 {
 	is_fifo_ = (flags & FLAGS_FIFO) != 0;
-	bool high_quality = (flags & FLAGS_HIGH_QUALITY) != 0;
+	bool lossless_connection = (flags & FLAGS_LOSSLESS) != 0;
 
 	static base::WaitableEvent *session_event = new base::WaitableEvent(base::WaitableEvent::ResetPolicy::AUTOMATIC,
 		base::WaitableEvent::InitialState::NOT_SIGNALED);
 	static base::PlatformThreadHandle thread_handle;
 	//static SerevrThread delegate(local_ip, port, &server, session_event, &task_runner, is_fifo);
-	std::unique_ptr<SerevrThread> delegate(new SerevrThread(local_ip, port, &server, session_event, &task_runner, is_fifo_, max_delay, lost_bytes_delta, high_quality));
+	std::unique_ptr<SerevrThread> delegate(new SerevrThread(local_ip, port, &server, session_event, &task_runner, is_fifo_, max_delay, lost_bytes_delta, lossless_connection));
 	
 	if (thread_handle.is_null()) {
 		base::PlatformThread::Create(0, delegate.get(), &thread_handle);

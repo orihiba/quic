@@ -137,7 +137,7 @@ public:
 		bool is_fifo,
 		size_t max_delay,
 		size_t lost_bytes_delta,
-		bool high_quality);
+		bool lossless_connection);
 
 	virtual ~QuicNormalServer();
 

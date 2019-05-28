@@ -119,7 +119,7 @@ public:
 		const QuicVersionVector& supported_versions,
 		std::unique_ptr<ProofVerifier> proof_verifier,
 		bool is_fifo,
-		bool high_quality,
+		bool lossless_connection,
 		size_t max_delay,
 		size_t lost_bytes_delta);
 	QuicNormalClient(IPEndPoint server_address,
@@ -128,7 +128,7 @@ public:
 		const QuicConfig& config,
 		std::unique_ptr<ProofVerifier> proof_verifier,
 		bool is_fifo,
-		bool high_quality,
+		bool lossless_connection,
 		size_t max_delay,
 		size_t lost_bytes_delta);
 

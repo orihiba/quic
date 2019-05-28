@@ -159,7 +159,9 @@ class NET_EXPORT_PRIVATE QuicConnectionVisitorInterface {
   // reserved crypto and headers stream.
   virtual bool HasOpenDynamicStreams() const = 0;
 
-  virtual void ShrinkStreams() const = 0;
+  virtual void ShrinkStreams(bool should_shrink) const = 0;
+
+  virtual bool CanShrink() const = 0;
 };
 
 // Interface which gets callbacks from the QuicConnection at interesting
@@ -558,6 +560,7 @@ class NET_EXPORT_PRIVATE QuicConnection
   // Otherwise, it will reschedule the timeout alarm.
   void CheckForTimeout();
   void CheckForIdleTimeout();
+  void CheckForFasterIdleTimeout();
   
   // Called when the ping alarm fires. Causes a ping frame to be sent only
   // if the retransmission alarm is not running.
@@ -1051,6 +1054,7 @@ class NET_EXPORT_PRIVATE QuicConnection
   // An alarm that fires when the connection may have timed out.
   QuicArenaScopedPtr<QuicAlarm> timeout_alarm_;
   QuicArenaScopedPtr<QuicAlarm> idle_timeout_alarm_;
+  QuicArenaScopedPtr<QuicAlarm> faster_idle_timeout_alarm_;
   // An alarm that fires when a ping should be sent.
   QuicArenaScopedPtr<QuicAlarm> ping_alarm_;
   // An alarm that fires when an MTU probe should be sent.
@@ -1073,6 +1077,7 @@ class NET_EXPORT_PRIVATE QuicConnection
   // Network idle time before this connection is closed.
   QuicTime::Delta idle_network_timeout_;
   QuicTime::Delta new_idle_network_timeout_;
+  QuicTime::Delta new_faster_idle_network_timeout_;
 
   // The connection will wait this long for the handshake to complete.
   QuicTime::Delta handshake_timeout_;
