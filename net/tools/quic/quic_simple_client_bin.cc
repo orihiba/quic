@@ -144,7 +144,7 @@ private:
 	std::unique_ptr<net::QuicNormalClient> quicr_client;
 	base::MessageLoopForIO quicr_message_loop;
 public:
-	QuicrClient(unsigned int flags = FLAGS_NONE, size_t max_delay = 0, size_t lost_bytes_delta = 0x10000);
+	QuicrClient(unsigned int flags = FLAGS_NONE, size_t max_delay = 0, size_t lost_bytes_delta = 0x100000);
 	bool connect(const char *host, uint16_t port);
 	int send(char *data, size_t len, bool end_of_message);
 	int send(char *data, size_t len);
@@ -161,10 +161,48 @@ int quicr_recv(char *buffer, size_t max_len);
 extern "C" EXPORT
 void flush();
 
+void parse_command_line(size_t *max_delay, size_t *lost_bytes_delta, bool *is_fifo, bool *lossless)
+{
+	base::CommandLine* command_line = base::CommandLine::ForCurrentProcess();
+	*max_delay = 0;
+	if (command_line->HasSwitch("max_delay"))
+	{
+		if (!base::StringToSizeT(command_line->GetSwitchValueASCII("max_delay"), max_delay)) {
+			LOG(ERROR) << "max_delay must be an integer\n";
+			exit(1);
+		}
+	}
+	*lost_bytes_delta = 0;
+	if (command_line->HasSwitch("lost_bytes_delta"))
+	{
+		if (!base::StringToSizeT(command_line->GetSwitchValueASCII("lost_bytes_delta"), lost_bytes_delta)) {
+			LOG(ERROR) << "lost_bytes_delta must be an integer\n";
+			exit(1);
+		}
+	}
+	*is_fifo = command_line->HasSwitch("fifo");
+	*lossless = command_line->HasSwitch("lossless");
+}
+
 void client2()
 {
-	//QuicrClient quicr_client(false, 12346);
-	QuicrClient quicr_client;//(FLAGS_HIGH_QUALITY);
+
+	size_t lost_bytes_delta = 0;
+	size_t max_delay = 0;
+	bool is_fifo = false;
+	bool lossless = false;
+	parse_command_line(&max_delay, &lost_bytes_delta, &is_fifo, &lossless);
+	uint8_t flags = FLAGS_NONE;
+	if (is_fifo) { flags |= FLAGS_FIFO; }
+	if (lossless) { flags |= FLAGS_LOSSLESS; }
+
+	if (is_fifo && !lossless) {
+		LOG(ERROR) << "Fifo mode must't be lossless\n";
+		exit(1);
+	}
+
+	max_delay = 0;
+	QuicrClient quicr_client(flags, max_delay, lost_bytes_delta);
 	if (false == quicr_client.connect("127.0.0.1", 6121)) { // 3 packets
 		exit(1);
 	}

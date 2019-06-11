@@ -767,7 +767,7 @@ void QuicPacketCreator::SerializePacket(char* encrypted_buffer,
 
   const size_t start_of_fec = GetPacketHeaderSize(framer_->version(), header);
 
-  // id retransmited packet, don't add to fec group
+  // if retransmited packet, don't add to fec group
   if (input_header.public_header.connection_id != 0x1337) {
 	  OnBuiltFecProtectedPayload(header, StringPiece(encrypted_buffer + start_of_fec, length - start_of_fec));
   }
