@@ -365,7 +365,7 @@ class NET_EXPORT_PRIVATE QuicPacketCreator {
 
   // Called when a data packet is constructed that is part of an FEC group.
   // |payload| is the non-encrypted FEC protected payload of the packet.
-  void OnBuiltFecProtectedPayload(QuicPacketHeader& header,
+  void OnBuiltFecProtectedPayload(const QuicPacketHeader& header,
 	  base::StringPiece payload);
 
   //void FillPacketHeader(QuicPacketHeader* header);
@@ -387,7 +387,7 @@ class NET_EXPORT_PRIVATE QuicPacketCreator {
   // a single packet. Sets the entropy hash of the serialized packet to a
   // random bool.
   // Fails if |buffer_len| isn't long enough for the encrypted packet.
-  void SerializePacket(char* encrypted_buffer, size_t buffer_len, const QuicPacketHeader &header = QuicPacketHeader());
+  void SerializePacket(char* encrypted_buffer, size_t buffer_len);
 
   // Called after a new SerialiedPacket is created to call the delegate's
   // OnSerializedPacket and reset state.

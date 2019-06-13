@@ -467,13 +467,9 @@ size_t QuicFramer::BuildDataPacket(const QuicPacketHeader& header,
 }
 
 QuicPacket* QuicFramer::BuildFecPacket(const QuicPacketHeader& header,
-	StringPiece redundancy, bool not_fec) {
-	// not_fec used when retransmited fec packet is built
-	if (!not_fec) {
-		DCHECK_EQ(IN_FEC_GROUP, header.is_in_fec_group);
-		DCHECK_NE(0u, header.fec_group);
-	}
-
+	StringPiece redundancy) {
+	DCHECK_EQ(IN_FEC_GROUP, header.is_in_fec_group);
+	DCHECK_NE(0u, header.fec_group);
 	size_t len = GetPacketHeaderSize(quic_version_, header);
 	len += redundancy.length();
 	
@@ -878,11 +874,8 @@ bool QuicFramer::AppendPacketHeader(const QuicPacketHeader& header,
 
 	  // Offset from the current packet number to the first fec
 	  // protected packet.
-	  uint8_t first_fec_protected_packet_offset = header.offset_in_fec_group;
-
-	  if (!writer->WriteBytes(&header.fec_group, 1)) {
-		  return false;
-	  }
+	  uint8_t first_fec_protected_packet_offset =
+		  static_cast<uint8_t>(header.packet_number - header.fec_group);
 	  if (!writer->WriteBytes(&first_fec_protected_packet_offset, 1)) {
 		  return false;
 	  }
@@ -1243,12 +1236,6 @@ bool QuicFramer::ProcessAuthenticatedHeader(QuicDataReader* reader,
 
   if ((private_flags & PACKET_PRIVATE_FLAGS_FEC_GROUP) != 0) {
 	  header->is_in_fec_group = IN_FEC_GROUP;
-	  QuicFecGroupNumber fec_group_number = 0;
-	  if (!reader->ReadBytes(&fec_group_number, 1)) {
-		  set_detailed_error("Unable to read fec_group_number.");
-		  return RaiseError(QUIC_INVALID_PACKET_HEADER);
-	  }
-
 	  uint8_t first_fec_protected_packet_offset;
 	  if (!reader->ReadBytes(&first_fec_protected_packet_offset, 1)) {
 		  set_detailed_error("Unable to read first fec protected packet offset.");
@@ -1260,8 +1247,8 @@ bool QuicFramer::ProcessAuthenticatedHeader(QuicDataReader* reader,
 			  "than the packet number.");
 		  return RaiseError(QUIC_INVALID_PACKET_HEADER);
 	  }
-	  header->offset_in_fec_group = first_fec_protected_packet_offset;
-	  header->fec_group = fec_group_number;
+	  header->fec_group =
+		  header->packet_number - first_fec_protected_packet_offset;
 	  header->fec_configuration = (FecConfiguration)((private_flags & PACKET_PRIVATE_FLAGS_FEC_CONFIG) >> 3);
   }
   header->entropy_hash = GetPacketEntropyHash(*header);

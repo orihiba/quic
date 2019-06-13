@@ -432,7 +432,7 @@ void QuicSentPacketManager::MarkForRetransmission(
     TransmissionType transmission_type) {
   const TransmissionInfo& transmission_info =
       unacked_packets_.GetTransmissionInfo(packet_number);
-  QUIC_BUG_IF(transmission_info.retransmittable_frames.empty() && !transmission_info.is_fec);
+  QUIC_BUG_IF(transmission_info.retransmittable_frames.empty());
   // Both TLP and the new RTO leave the packets in flight and let the loss
   // detection decide if packets are lost.
   if (transmission_type != TLP_RETRANSMISSION &&
@@ -511,22 +511,6 @@ PendingRetransmission QuicSentPacketManager::NextPendingRetransmission() {
   DCHECK(unacked_packets_.IsUnacked(packet_number)) << packet_number;
   const TransmissionInfo& transmission_info =
       unacked_packets_.GetTransmissionInfo(packet_number);
-  
-  if (transmission_info.is_fec) {
-	  return PendingRetransmission(path_id_, packet_number, transmission_type,
-		  transmission_info.retransmittable_frames,
-		  transmission_info.has_crypto_handshake,
-		  transmission_info.num_padding_bytes,
-		  transmission_info.encryption_level,
-		  transmission_info.packet_number_length,
-		  transmission_info.fec_group,
-		  transmission_info.fec_configuration,
-		  transmission_info.offset_in_fec_group,
-		  transmission_info.is_in_fec_group,
-		  transmission_info.fec_buffer,
-		  transmission_info.fec_buffer_len);
-  }
-
   DCHECK(!transmission_info.retransmittable_frames.empty());
 
   return PendingRetransmission(path_id_, packet_number, transmission_type,
@@ -534,11 +518,7 @@ PendingRetransmission QuicSentPacketManager::NextPendingRetransmission() {
                                transmission_info.has_crypto_handshake,
                                transmission_info.num_padding_bytes,
                                transmission_info.encryption_level,
-                               transmission_info.packet_number_length,
-							  transmission_info.fec_group,
-							  transmission_info.fec_configuration,
-							  transmission_info.offset_in_fec_group,
-						transmission_info.is_in_fec_group);
+                               transmission_info.packet_number_length);
 }
 
 QuicPacketNumber QuicSentPacketManager::GetNewestRetransmission(
@@ -641,10 +621,6 @@ bool QuicSentPacketManager::OnPacketSent(
   DCHECK(!unacked_packets_.IsUnacked(packet_number));
   QUIC_BUG_IF(serialized_packet->encrypted_length == 0)
       << "Cannot send empty packets.";
-
-  if (serialized_packet->is_fec_packet) {
-	  VLOG(2) << "OnPacketSent fec packet. number: " << packet_number;
-  }
 
   if (delegate_ == nullptr && original_packet_number != 0) {
     pending_retransmissions_.erase(original_packet_number);
@@ -757,7 +733,7 @@ void QuicSentPacketManager::RetransmitRtoPackets() {
   QuicPacketNumber packet_number = unacked_packets_.GetLeastUnacked();
   for (QuicUnackedPacketMap::const_iterator it = unacked_packets_.begin();
        it != unacked_packets_.end(); ++it, ++packet_number) {
-    if ((!it->retransmittable_frames.empty() || it->is_fec) &&
+    if (!it->retransmittable_frames.empty() &&
         pending_timer_transmission_count_ < kMaxRetransmissionsOnTimeout) {
       MarkForRetransmission(packet_number, RTO_RETRANSMISSION);
       ++pending_timer_transmission_count_;
@@ -765,19 +741,16 @@ void QuicSentPacketManager::RetransmitRtoPackets() {
     // Abandon non-retransmittable data that's in flight to ensure it doesn't
     // fill up the congestion window.
     const bool has_retransmissions = it->retransmission != 0;
-    if (it->retransmittable_frames.empty() && it->in_flight && !has_retransmissions) {
-		if (it->is_fec) {
-			// dont remove fec packets!
-		} else {
-			// Log only for non-retransmittable data.
-			// Retransmittable data is marked as lost during loss detection, and will
-			// be logged later.
-			unacked_packets_.RemoveFromInFlight(packet_number);
-			if (debug_delegate_ != nullptr) {
-				debug_delegate_->OnPacketLoss(packet_number, RTO_RETRANSMISSION,
-					clock_->Now());
-			}
-		}
+    if (it->retransmittable_frames.empty() && it->in_flight &&
+        !has_retransmissions) {
+      // Log only for non-retransmittable data.
+      // Retransmittable data is marked as lost during loss detection, and will
+      // be logged later.
+      unacked_packets_.RemoveFromInFlight(packet_number);
+      if (debug_delegate_ != nullptr) {
+        debug_delegate_->OnPacketLoss(packet_number, RTO_RETRANSMISSION,
+                                      clock_->Now());
+      }
     }
   }
   if (pending_timer_transmission_count_ > 0) {
@@ -819,7 +792,7 @@ void QuicSentPacketManager::InvokeLossDetection(QuicTime time) {
     }
 
     // TODO(ianswett): This could be optimized.
-    if (unacked_packets_.HasRetransmittableFrames(pair.first) || unacked_packets_.GetTransmissionInfo(pair.first).is_fec) { // retrasnmit fec
+    if (unacked_packets_.HasRetransmittableFrames(pair.first)) {
       MarkForRetransmission(pair.first, LOSS_RETRANSMISSION);
     } else {
       // Since we will not retransmit this, we need to remove it from

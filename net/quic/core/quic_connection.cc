@@ -58,7 +58,7 @@ namespace {
 
 // Limit the number of FEC groups to two (now 5).  If we get enough out of order packets
 // that this becomes limiting, we can revisit.
-const size_t kMaxFecGroups = 20;
+const size_t kMaxFecGroups = 5;
 
 // The largest gap in packets we'll accept without closing the connection.
 // This will likely have to be tuned.
@@ -950,7 +950,7 @@ void QuicConnection::ProcessStopWaitingFrame(
   largest_seen_packet_with_stop_waiting_ = last_header_.packet_number;
   received_packet_manager_.UpdatePacketInformationSentByPeer(stop_waiting);
   // Possibly close any FecGroups which are now irrelevant.
-  //CloseFecGroupsBefore(stop_waiting.least_unacked + 1);
+  CloseFecGroupsBefore(stop_waiting.least_unacked + 1);
 }
 
 bool QuicConnection::OnStopWaitingFrame(const QuicStopWaitingFrame& frame) {
@@ -1551,7 +1551,7 @@ void QuicConnection::ProcessUdpPacket(const IPEndPoint& self_address,
 #ifdef LOSS
   if (perspective_ == Perspective::IS_CLIENT) {
 	//  if (number_of_packets++ == 4) { return; }
-	 if (/*(number_of_packets >= 3 && number_of_packets <= 5) ||*/ (number_of_packets >= 20 && number_of_packets <= 30) || (number_of_packets >= 35 && number_of_packets <= 45) /*|| (number_of_packets >= 29 && number_of_packets <= 33) || (number_of_packets >= 36 && number_of_packets <= 40)*/)
+	 if (/*(number_of_packets >= 3 && number_of_packets <= 5) ||*/ (number_of_packets >= 60 && number_of_packets <= 70)/* || (number_of_packets >= 65 && number_of_packets <= 66)*/ /*|| (number_of_packets >= 29 && number_of_packets <= 33) || (number_of_packets >= 36 && number_of_packets <= 40)*/)
 	 {
 	   number_of_packets++;
 		  return;
@@ -2380,7 +2380,6 @@ void QuicConnection::MaybeProcessRevivedPacket() {
 	//last_decrypted_packet_level_ = group->EffectiveEncryptionLevel();
 	last_decrypted_packet_level_ = ENCRYPTION_FORWARD_SECURE;
 	DCHECK_LT(last_decrypted_packet_level_, NUM_ENCRYPTION_LEVELS);
-	VLOG(1) << "Deleting group number " << group->FecGroupNumber();
 	delete group;
 	group = nullptr;
 	group_map_.erase(last_header_.fec_group);
@@ -2407,6 +2406,7 @@ void QuicConnection::MaybeProcessRevivedPacket() {
 		revived_header.fec_flag = false;
 		revived_header.is_in_fec_group = NOT_IN_FEC_GROUP;
 		revived_header.fec_group = last_header_.fec_group;
+		revived_header.packet_number = (*it)->packet_number;
 
 		last_packet_revived_ = true;
 	//	if (debug_visitor_ != nullptr) {
@@ -2426,14 +2426,14 @@ QuicFecGroup* QuicConnection::GetFecGroup() {
 		return nullptr;
 	}
 	QuicFecGroupNumber fec_group_num = last_header_.fec_group;
-	if (fec_group_num == 0) {/* ||
+	if (fec_group_num == 0 ||
 		(fec_group_num <
 			received_packet_manager_.peer_least_packet_awaiting_ack() &&
 			!ContainsKey(group_map_, fec_group_num))) {
 		// If the group number is below peer_least_packet_awaiting_ack and this
 		// group does not exist, which means this group has missing packets below
 		// |peer_least_packet_awaiting_ack| which we would never receive, so return
-		// nullptr.*/
+		// nullptr.
 		return nullptr;
 	}
 	if (!ContainsKey(group_map_, fec_group_num)) {
@@ -2447,13 +2447,12 @@ QuicFecGroup* QuicConnection::GetFecGroup() {
 			delete group_map_.begin()->second;
 			group_map_.erase(group_map_.begin());
 		}
-		VLOG(2) << "fec_configuration: " << last_header_.fec_configuration << " for group: " << fec_group_num;
+		VLOG(1) << "fec_configuration: " << last_header_.fec_configuration;
 		group_map_[fec_group_num] = new QuicFecGroup(fec_group_num, last_header_.fec_configuration);
 		/*if (useFec && !losslessConnection) {
 			visitor_->ShrinkStreams();
 		}*/
 	}
-	VLOG(2) << "returning fec group for number " << fec_group_num << ". number of packets are: " << group_map_[fec_group_num]->NumReceivedPackets();
 	return group_map_[fec_group_num];
 }
 
@@ -2851,7 +2850,7 @@ HasRetransmittableData QuicConnection::IsRetransmittable(
   // Retransmitted packets retransmittable frames are owned by the unacked
   // packet map, but are not present in the serialized packet.
   if (packet.transmission_type != NOT_RETRANSMISSION ||
-      !packet.retransmittable_frames.empty() || packet.is_fec_packet) {
+      !packet.retransmittable_frames.empty()) {
     return HAS_RETRANSMITTABLE_DATA;
   } else {
     return NO_RETRANSMITTABLE_DATA;
