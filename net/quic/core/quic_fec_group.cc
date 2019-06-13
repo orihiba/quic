@@ -8,7 +8,7 @@
 
 #include "base/logging.h"
 #include "base/stl_util.h"
-
+#include "net/quic/core/quic_utils.h"
 using namespace cat;
 
 
@@ -103,6 +103,10 @@ bool QuicFecGroup::UpdateSentList(EncryptionLevel encryption_level,
 	
 	// add the packet size to the beginning of the packet, and add it to the list
 	ParityPacket * packet = new ParityPacket(header.packet_number, std::move(*appendLenToPayload(decrypted_payload, header.public_header.packet_number_length)), header.public_header.packet_number_length);
+
+	/*VLOG(1) << "Fec sent packet number " << header.packet_number << " from fec group " << header.fec_group  << std::endl <<
+		QuicUtils::HexDump(*payload_ptr) << std::endl;*/
+
 	parity_sent_packets_.push_back(packet);
 	DVLOG(1) << "Sending! Saving packet number " << header.packet_number;
 
@@ -122,6 +126,9 @@ bool QuicFecGroup::UpdateReceivedList(EncryptionLevel encryption_level,
 							bool is_fec_data) {
   DCHECK_EQ(min_protected_packet_, header.fec_group);
   DCHECK_NE(kInvalidPacketNumber, header.packet_number);
+
+  VLOG(1) << "Received packet to fec group " << header.fec_group << std::endl <<
+	  QuicUtils::HexDump(decrypted_payload) << std::endl;
 
   // the last fec protected packet before fec packet, will be the max_protected_packet
   // irrelevant, because we set max on ctor
@@ -147,6 +154,10 @@ bool QuicFecGroup::UpdateReceivedList(EncryptionLevel encryption_level,
 	  payloadToSave = *appendLenToPayload(payloadToSave, header.public_header.packet_number_length);
   }
   ParityPacket * packet = new ParityPacket(header.packet_number, std::move(payloadToSave), header.public_header.packet_number_length);
+
+//  VLOG(1) << "Fec sent Received number " << header.packet_number << " from fec group " << header.fec_group << " len is " << payloadToSave .size() << " offset is " << header.offset_in_fec_group << std::endl <<
+//	  QuicUtils::HexDump(payloadToSave) << std::endl;
+
   parity_received_packets_.push_back(packet);
   DVLOG(1) << "Received! Saving packet number " << header.packet_number;
   

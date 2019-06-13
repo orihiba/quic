@@ -114,7 +114,7 @@ class NET_EXPORT_PRIVATE QuicPacketGenerator {
                                   QuicAckListenerInterface* listener);
   
   // If packets can be revived from the current FEC group, then revive 
-  std::list<ParityPacket> getRevivedPackets(QuicFecGroup * group);
+  //std::list<ParityPacket> getRevivedPackets(QuicFecGroup * group);
 
   // Indicates whether batch mode is currently enabled.
   bool InBatchMode();

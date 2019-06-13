@@ -2401,7 +2401,7 @@ void QuicConnection::MaybeProcessRevivedPacket() {
 		revived_header.public_header.version_flag = false;
 		revived_header.public_header.reset_flag = false;
 		revived_header.public_header.packet_number_length = (*it)->packet_number_len;
-        DVLOG(1) << "revived packet number " << (*it)->packet_number << " has number len: " << (*it)->packet_number_len;
+        DVLOG(1) << "revived packet number " << revived_header.packet_number << " has number len: " << (*it)->packet_number_len;
 
 		revived_header.fec_flag = false;
 		revived_header.is_in_fec_group = NOT_IN_FEC_GROUP;

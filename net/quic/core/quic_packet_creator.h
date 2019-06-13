@@ -102,7 +102,7 @@ class NET_EXPORT_PRIVATE QuicPacketCreator {
 
 
   // If packets can be revived from the current FEC group, then revive 
-  std::list<ParityPacket> getReveivedPackets(QuicFecGroup * group);
+  //std::list<ParityPacket> getReveivedPackets(QuicFecGroup * group);
 
   // Resets (closes) the FEC group. This method should only be called on a
   // packet boundary.

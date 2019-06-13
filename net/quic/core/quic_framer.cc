@@ -869,7 +869,7 @@ bool QuicFramer::AppendPacketHeader(const QuicPacketHeader& header,
   // protected packet, or 0 if this packet is not protected.
   if (header.is_in_fec_group == IN_FEC_GROUP) {
 	  DCHECK_LE(header.fec_group, header.packet_number);
-	  DCHECK_LT(header.packet_number - header.fec_group, 255u);
+	  DCHECK_LT(header.packet_number - header.fec_group, 255u); // TODO consider canceling fec group in this case
 
 
 	  // Offset from the current packet number to the first fec
