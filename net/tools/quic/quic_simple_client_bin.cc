@@ -139,15 +139,15 @@ private:
 	bool lossless_;
 	size_t max_delay_;
 	size_t lost_bytes_delta_;
-	int sendInner(char * data, size_t len, bool end_of_message);
+	int sendInner(const char * data, size_t len, bool end_of_message);
 	base::AtExitManager quicr_exit_manager;
 	std::unique_ptr<net::QuicNormalClient> quicr_client;
 	base::MessageLoopForIO quicr_message_loop;
 public:
 	QuicrClient(unsigned int flags = FLAGS_NONE, size_t max_delay = 0, size_t lost_bytes_delta = 0x100000);
 	bool connect(const char *host, uint16_t port);
-	int send(char *data, size_t len, bool end_of_message);
-	int send(char *data, size_t len);
+	int send(const char *data, size_t len, bool end_of_message);
+	int send(const char *data, size_t len);
 	int recv(char *buffer, size_t max_len);
 	connection_status getStatus();
 };
@@ -734,7 +734,7 @@ bool QuicrClient::connect(const char * host, uint16_t port)
 
 //extern "C" EXPORT
 // used for non fifo clients
-int QuicrClient::send(char * data, size_t len)
+int QuicrClient::send(const char * data, size_t len)
 {
 	if (is_fifo_) {
 		return -1;
@@ -742,7 +742,7 @@ int QuicrClient::send(char * data, size_t len)
 	return this->sendInner(data, len, true);
 }
 
-int QuicrClient::send(char * data, size_t len, bool end_of_message)
+int QuicrClient::send(const char * data, size_t len, bool end_of_message)
 {
 	if (!is_fifo_) {
 		return -1;
@@ -750,12 +750,12 @@ int QuicrClient::send(char * data, size_t len, bool end_of_message)
 	return this->sendInner(data, len, end_of_message);
 }
 
-int QuicrClient::sendInner(char * data, size_t len, bool end_of_message)
+int QuicrClient::sendInner(const char * data, size_t len, bool end_of_message)
 {
 	if (quicr_client == nullptr) {
 		return -1;
 	}
-	quicr_client->WriteOrBufferData(std::string(data), true);
+	quicr_client->WriteOrBufferData(std::string(data, len), true);
 	
 	return 0;
 }

@@ -210,7 +210,7 @@ class NET_EXPORT_PRIVATE QuicSentPacketManager
 
   void OnApplicationLimited() override;
 
-  QuicPacketNumber GetLargestNewlyAcked() const override { return largest_newly_acked_; }
+  QuicPacketNumber GetLargestNewlyAcked() const override;
 
   void AddFecGroup(QuicPacketNumber first, QuicPacketCount size, QuicPacketCount redundAmount) override;
 

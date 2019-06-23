@@ -228,11 +228,11 @@ private:
 
 	std::vector<std::string> data_arr;
 
-	base::WeakPtrFactory<QuicNormalServer> weak_factory_;
-
 	bool is_fifo_;
 	size_t max_delay_;
 	size_t lost_bytes_delta_;
+
+	base::WeakPtrFactory<QuicNormalServer> weak_factory_;
 
 	DISALLOW_COPY_AND_ASSIGN(QuicNormalServer);
 };

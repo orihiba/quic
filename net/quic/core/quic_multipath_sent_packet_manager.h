@@ -151,6 +151,8 @@ class NET_EXPORT_PRIVATE QuicMultipathSentPacketManager
 
   QuicPacketNumber GetLargestSentPacket(QuicPathId path_id) const override;
 
+  QuicPacketNumber GetLargestNewlyAcked() const override;
+
   QuicPacketNumber GetLeastPacketAwaitedByPeer(
       QuicPathId path_id) const override;
 

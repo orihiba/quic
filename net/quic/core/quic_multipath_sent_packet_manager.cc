@@ -386,6 +386,12 @@ QuicPacketNumber QuicMultipathSentPacketManager::GetLargestSentPacket(
   return path_manager->GetLargestSentPacket(path_id);
 }
 
+QuicPacketNumber QuicMultipathSentPacketManager::GetLargestNewlyAcked() const
+{
+	return 0;
+}
+
+
 QuicPacketNumber QuicMultipathSentPacketManager::GetLeastPacketAwaitedByPeer(
     QuicPathId path_id) const {
   QuicSentPacketManagerInterface* path_manager =

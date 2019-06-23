@@ -355,7 +355,7 @@ const std::list<ParityPacket *> QuicFecGroup::getRedundancyPackets() {
 	for (size_t i = 0; i < recovery_block_count_; ++i)
 	{
 		size_t erasure_index = recovery_block_count_ - i - 1;
-		payloads.push_back(new ParityPacket((QuicPacketNumber)(min_protected_packet_ + block_count_ + erasure_index), std::move(std::string((char*)(recovery_blocks + erasure_index * block_bytes), block_bytes)), PACKET_1BYTE_PACKET_NUMBER)); // packet number len is not used
+		payloads.push_back(new ParityPacket((QuicPacketNumber)(min_protected_packet_ + block_count_ + erasure_index), std::string((char*)(recovery_blocks + erasure_index * block_bytes), block_bytes), PACKET_1BYTE_PACKET_NUMBER)); // packet number len is not used
 	}
 
 	return payloads;

@@ -86,7 +86,7 @@ class NET_EXPORT_PRIVATE QuicSession : public QuicConnectionVisitorInterface {
   bool HasPendingHandshake() const override;
   bool HasOpenDynamicStreams() const override;
   void ShrinkStreams(bool should_shrink) const override {};
-  bool CanShrink() const override { return false; }
+  bool CanShrink() const override;
   void OnPathDegrading() override;
 
   // Called on every incoming packet. Passes |packet| through to |connection_|.

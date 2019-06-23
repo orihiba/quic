@@ -337,7 +337,7 @@ class SerevrThread
 public:
 	SerevrThread(const char * _local_ip, uint16_t _port, net::QuicNormalServer **_server, base::WaitableEvent *_session_event, base::TaskRunner **_task_runner, bool _is_fifo, size_t _max_delay, size_t _lost_bytes_delta, bool _lossless_connection) : local_ip(_local_ip), port(_port), server(_server), session_event(_session_event), task_runner(_task_runner), is_fifo(_is_fifo), max_delay(_max_delay), lost_bytes_delta(_lost_bytes_delta), lossless_connection(_lossless_connection){}
 	base::WaitableEvent *get_session_event() { return session_event; }
-	virtual ~SerevrThread() = default;
+	~SerevrThread() override = default;
 private:
 	const char * local_ip;
 	uint16_t port;

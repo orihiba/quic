@@ -1099,6 +1099,11 @@ void QuicSentPacketManager::OnApplicationLimited() {
   send_algorithm_->OnApplicationLimited(unacked_packets_.bytes_in_flight());
 }
 
+QuicPacketNumber QuicSentPacketManager::GetLargestNewlyAcked() const
+{
+	return largest_newly_acked_;
+}
+
 void QuicSentPacketManager::AddFecGroup(QuicPacketNumber first, QuicPacketCount size, QuicPacketCount redundAmount)
 {
 	//VLOG(1) << "sent" << first << " " << size;

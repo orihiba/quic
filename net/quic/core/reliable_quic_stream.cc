@@ -510,9 +510,9 @@ private:
 
 QuicNormalStream::QuicNormalStream(QuicStreamId id, QuicSession * quic_session, size_t max_delay)
 	: ReliableQuicStream(id, quic_session),
+	bounded_delay_alarm_(nullptr),
 	session_(quic_session),
 	visitor_(nullptr),
-	bounded_delay_alarm_(nullptr),
 	arena_(),
 	bytes_remaining_(0) {
 

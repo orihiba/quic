@@ -232,10 +232,10 @@ QuicNormalServer::QuicNormalServer(
 	read_buffer_(new IOBufferWithSize(kReadBufferSize)),
 	session_event_(session_event),
 	data_arr(),
-	weak_factory_(this),
 	is_fifo_(is_fifo),
 	max_delay_(max_delay), 
-	lost_bytes_delta_(lost_bytes_delta) {
+	lost_bytes_delta_(lost_bytes_delta),
+	weak_factory_(this) {
 	losslessConnection = lossless_connection;
 		data_event_ = new base::WaitableEvent(base::WaitableEvent::ResetPolicy::AUTOMATIC,
 			base::WaitableEvent::InitialState::NOT_SIGNALED);

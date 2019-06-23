@@ -174,7 +174,7 @@ class NET_EXPORT_PRIVATE QuicSentPacketManagerInterface {
 
   virtual QuicPacketNumber GetLargestSentPacket(QuicPathId path_id) const = 0;
 
-  virtual QuicPacketNumber GetLargestNewlyAcked() const { return 0; }
+  virtual QuicPacketNumber GetLargestNewlyAcked() const = 0;
 
   virtual QuicPacketNumber GetLeastPacketAwaitedByPeer(
       QuicPathId path_id) const = 0;

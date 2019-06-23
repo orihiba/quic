@@ -133,6 +133,11 @@ void QuicSession::OnConnectionClosed(QuicErrorCode error,
 void QuicSession::OnSuccessfulVersionNegotiation(
     const QuicVersion& /*version*/) {}
 
+bool QuicSession::CanShrink() const
+{
+	return false;
+}
+
 void QuicSession::OnPathDegrading() {}
 
 void QuicSession::OnWindowUpdateFrame(const QuicWindowUpdateFrame& frame) {
