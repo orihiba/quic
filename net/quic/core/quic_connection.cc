@@ -1547,7 +1547,7 @@ void QuicConnection::ProcessUdpPacket(const IPEndPoint& self_address,
   if (!connected_) {
     return;
   }
-#define LOSS
+
 #ifdef LOSS
   if (perspective_ == Perspective::IS_CLIENT) {
 	//  if (number_of_packets++ == 4) { return; }
