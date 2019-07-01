@@ -854,32 +854,41 @@ void QuicNormalSession::OnStreamFrame(const QuicStreamFrame& frame) {
 	}
 }
 
-int QuicNormalSession::ReadData(char *buffer, size_t len)
+QuicNormalStream * QuicNormalSession::GetReadableStream(size_t len)
 {
 	/*for (auto const& kv : dynamic_streams()) {
-		((QuicNormalStream*)kv.second)->Read(buffer, len);
-		break;
+	((QuicNormalStream*)kv.second)->Read(buffer, len);
+	break;
 	}*/
 	if (readable_stream_map_.empty()) {
-		return 0;
+		return nullptr;
 	}
 	ReadableStreamMap::iterator it = readable_stream_map_.begin();
 	QuicNormalStream *stream = (QuicNormalStream*)it->second;
 	if (stream == nullptr) { //some error
-		return 0;
+		return nullptr;
 	}
 
 	if (fifo_session_) {
-		if (stream->HasBytesToRead() || (stream->data().size() >= stream->bytes_remaining()) || (stream->data().size() >= len)) {
-			return stream->ReadFifo(buffer, len);
+		if (stream->HasBytesToRead() || ((stream->bytes_remaining() != 0) && ((stream->data().size() >= stream->bytes_remaining()) || (stream->data().size() >= len)))) {
+			return stream;
 		}
 	} else { // non fifo
 		if (stream->fin_received()) {
-			return stream->Read(buffer, len);
+			return stream;
 		}
 	}
 
-	return 0;
+	return nullptr;
+}
+
+int QuicNormalSession::ReadData(QuicNormalStream *stream, char *buffer, size_t len)
+{
+	if (fifo_session_) {
+		return stream->ReadFifo(buffer, len);
+	} else { // non fifo
+		return stream->Read(buffer, len);
+	}
 }
 
 void QuicNormalSession::AddRedableStream(QuicNormalStream *stream)

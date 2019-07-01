@@ -1538,7 +1538,6 @@ const QuicConnectionStats& QuicConnection::GetStats() {
 void QuicConnection::ProcessUdpPacket(const IPEndPoint& self_address,
                                       const IPEndPoint& peer_address,
                                       const QuicReceivedPacket& packet) {
-	static int number_of_packets = 1;
 	idle_timeout_alarm_->Update(clock_->ApproximateNow() + new_idle_network_timeout_, QuicTime::Delta::Zero());
 	if (!losslessConnection) {
 		faster_idle_timeout_alarm_->Update(clock_->ApproximateNow() + new_faster_idle_network_timeout_, QuicTime::Delta::Zero());
@@ -1549,6 +1548,7 @@ void QuicConnection::ProcessUdpPacket(const IPEndPoint& self_address,
   }
 
 #ifdef LOSS
+  static int number_of_packets = 1;
   if (perspective_ == Perspective::IS_CLIENT) {
 	//  if (number_of_packets++ == 4) { return; }
 	 if (/*(number_of_packets >= 3 && number_of_packets <= 5) ||*/ (number_of_packets >= 60 && number_of_packets <= 70)/* || (number_of_packets >= 65 && number_of_packets <= 66)*/ /*|| (number_of_packets >= 29 && number_of_packets <= 33) || (number_of_packets >= 36 && number_of_packets <= 40)*/)

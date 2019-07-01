@@ -436,7 +436,8 @@ public:
 	using ReadableStreamMap =
 		base::SmallMap<std::unordered_map<QuicStreamId, QuicNormalStream*>, 2>;
 	ReadableStreamMap readable_stream_map_;
-	int ReadData(char *buffer, size_t len);
+	QuicNormalStream * GetReadableStream(size_t len);
+	int ReadData(QuicNormalStream *stream, char *buffer, size_t len);
 	void CloseStreamInner(QuicStreamId stream_id, bool locally_reset) override;
 
 	void AddRedableStream(QuicNormalStream *stream);

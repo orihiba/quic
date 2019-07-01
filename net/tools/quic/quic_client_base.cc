@@ -755,8 +755,14 @@ int QuicNormalClientBase::Recv(char *buf, size_t len) {
 	int bytes_read = 0;
 
 	while (bytes_read == 0) {
-		RunEventLoop();
-		bytes_read = session_->ReadData(buf, len);
+		QuicNormalStream *stream = session_->GetReadableStream(len);
+		if (stream == nullptr) {
+			RunEventLoop();
+			stream = session_->GetReadableStream(len);
+		}
+		if (stream != nullptr) {
+			bytes_read = session_->ReadData(stream, buf, len);
+		}
 	}
 	return bytes_read;
 }

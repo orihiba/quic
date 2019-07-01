@@ -504,6 +504,9 @@ public:
 	virtual bool HasChlosBuffered() const;
 
 	QuicNormalServer* server() { return server_; }
+
+	QuicConnectionId current_connection_id() { return current_connection_id_; }
+
 protected:
 	virtual QuicNormalServerSessionBase* CreateQuicSession(
 		QuicConnectionId connection_id,
@@ -558,7 +561,6 @@ protected:
 
 	const QuicVersionVector& GetSupportedVersions();
 
-	QuicConnectionId current_connection_id() { return current_connection_id_; }
 	const IPEndPoint& current_server_address() { return current_server_address_; }
 	const IPEndPoint& current_client_address() { return current_client_address_; }
 	const QuicReceivedPacket& current_packet() { return *current_packet_; }

@@ -709,7 +709,7 @@ int QuicNormalStream::ReadFifoInner(char* buf, size_t buf_len)
 
 		// if received more than a message, cut the first message
 		if (bytes_to_read < data_.size()) {
-			strncpy(buf, data_.c_str(), bytes_to_read);
+			memcpy(buf, data_.c_str(), bytes_to_read);
 
 			// mark as read
 			data_.erase(0, bytes_to_read);
@@ -760,7 +760,7 @@ int QuicNormalStream::ReadFifo(char* buf, size_t buf_len) {
 	}
 
 	size_t bytes_to_read = data_.size();
-	strncpy(buf, data_.c_str(), bytes_to_read);
+	memcpy(buf, data_.c_str(), bytes_to_read);
 	data_.erase(0, bytes_to_read);
 	bytes_remaining_ -= bytes_to_read;
 	return bytes_to_read;

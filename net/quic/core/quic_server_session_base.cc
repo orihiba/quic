@@ -264,7 +264,8 @@ QuicNormalServerSessionBase::QuicNormalServerSessionBase(
 	bandwidth_resumption_enabled_(false),
 	bandwidth_estimate_sent_to_client_(QuicBandwidth::Zero()),
 	last_scup_time_(QuicTime::Zero()),
-	last_scup_packet_number_(0) {}
+	last_scup_packet_number_(0),
+	last_stream_(nullptr) {}
 
 QuicNormalServerSessionBase::~QuicNormalServerSessionBase() {}
 
@@ -474,15 +475,13 @@ int32_t QuicNormalServerSessionBase::BandwidthToCachedParameterBytesPerSecond(
 		: static_cast<int32_t>(bytes_per_second));
 }
 
-QuicNormalStream *last_stream = nullptr;
-
 void QuicNormalServerSessionBase::SendData(const char *raw_data, size_t len, bool end_of_message)
 {
 	base::StringPiece data(raw_data, len);
 	QuicNormalStream *stream;
 
-	if (last_stream != nullptr) {
-		stream = last_stream;
+	if (last_stream_ != nullptr) {
+		stream = last_stream_;
 	}
 	else {
 		stream = (QuicNormalStream*)CreateOutgoingDynamicStream(kDefaultPriority);
@@ -490,11 +489,11 @@ void QuicNormalServerSessionBase::SendData(const char *raw_data, size_t len, boo
 			QUIC_BUG << "stream creation failed!";
 			return;
 		}
-		last_stream = stream;
+		last_stream_ = stream;
 	}
 
 	if (end_of_message) {
-		last_stream = nullptr;
+		last_stream_ = nullptr;
 	}
 
 	stream->WriteOrBufferData(data, end_of_message, nullptr);

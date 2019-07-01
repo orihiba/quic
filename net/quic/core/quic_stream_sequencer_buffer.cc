@@ -400,7 +400,7 @@ int QuicStreamSequencerBuffer::GetReadableRegions(struct iovec* iov,
 	}
 
 	// read until block of first shrank gap (or until end if no shrink exist)
-	while (block_idx < first_shrank_gap_block_idx && block_idx < end_block_idx) {
+	while (block_idx != first_shrank_gap_block_idx && block_idx != end_block_idx) {
 		if (iov_used >= iov_count) {
 			break;
 		}
@@ -451,7 +451,7 @@ int QuicStreamSequencerBuffer::GetReadableRegions(struct iovec* iov,
 	}
 	
 	// read until last block
-	while (block_idx < end_block_idx) {
+	while (block_idx != end_block_idx) {
 		if (iov_used >= iov_count) {
 			break;
 		}
