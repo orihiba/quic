@@ -377,11 +377,18 @@ void QuicNormalServer::OnReadComplete(int result) {
 		result = ERR_CONNECTION_CLOSED;
 
 	if (result < 0) {
+		// HIBA: A hack to avoid server stop responding after a client closes the connection
+		if (result == ERR_CONNECTION_RESET) {
+			result = 0x3b;
+			goto cont;
+		}
+
 		LOG(ERROR) << "QuicNormalServer read failed: " << ErrorToString(result);
 		Shutdown();
 		return;
 	}
 
+	cont:
 	QuicReceivedPacket packet(read_buffer_->data(), result,
 		helper_->GetClock()->Now(), false);
 	dispatcher_->ProcessPacket(server_address_, client_address_, packet);

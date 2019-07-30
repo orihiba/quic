@@ -36,6 +36,7 @@
 #include "net/quic/core/quic_packet_generator.h"
 #include "net/quic/core/quic_sent_packet_manager.h"
 #include "net/quic/core/quic_utils.h"
+#include <iostream>
 
 using base::ContainsKey;
 using base::StringPiece;
@@ -879,6 +880,7 @@ void QuicConnection::UpdateFecCofiguration(QuicPacketCount packets_received)
 		useFec = true;
 	}
 	DVLOG(1) << "current_fec_configuration: " << current_fec_configuration;
+	std::cout << "current_fec_configuration: " << current_fec_configuration << std::endl;
 }
 
 bool QuicConnection::OnAckFrame(const QuicAckFrame& incoming_ack) {
@@ -925,7 +927,9 @@ bool QuicConnection::OnAckFrame(const QuicAckFrame& incoming_ack) {
   //{
   //}
 
-  UpdateFecCofiguration(incoming_ack.packets_received_number);
+  if (programUseFec) {
+	  UpdateFecCofiguration(incoming_ack.packets_received_number);
+  }
 
   return connected_;
 }

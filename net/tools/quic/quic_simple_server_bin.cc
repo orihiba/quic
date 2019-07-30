@@ -100,6 +100,13 @@ void parse_command_line(size_t *max_delay, size_t *lost_bytes_delta, bool *is_fi
 	}
 	*is_fifo = command_line->HasSwitch("fifo");
 	*lossless = command_line->HasSwitch("lossless");
+
+	if (command_line->HasSwitch("port")) {
+		if (!base::StringToInt(command_line->GetSwitchValueASCII("port"), &FLAGS_port)) {
+			LOG(ERROR) << "--port must be an integer\n";
+			exit(1);
+		}
+	}
 }
 
 void server2()
@@ -119,7 +126,7 @@ void server2()
 	}
 
 	max_delay = 0;
-	QuicrServer quicr_server("0.0.0.0", 6121, flags, max_delay, lost_bytes_delta);
+	QuicrServer quicr_server("0.0.0.0", FLAGS_port, flags, max_delay, lost_bytes_delta);
 	
 	while (true) {
 		size_t connection_id = quicr_server.accept();
@@ -424,6 +431,7 @@ size_t QuicrServer::accept()
 
 	// map is not ordered by insert...
 	return it->first;*/
+
 	return server->dispatcher()->current_connection_id();
 }
 
@@ -476,7 +484,7 @@ int QuicrServer::send_file_fifo(size_t connection_id, const FilePath &file_path)
 	RET_ON_ERROR(send(connection_id, (char*)file_len_ptr, sizeof(file_len), false));
 	VLOG(1) << "sent file size";
 
-#define CHUNK_SIZE 0x4000
+#define CHUNK_SIZE 0x10000000
 #ifndef MIN
 #define MIN(X, Y) (Y < X ? Y : X)
 #endif

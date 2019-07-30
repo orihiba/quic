@@ -784,32 +784,41 @@ int QuicrClient::recv_file(const FilePath &file_path)
 
 	std::cout << "Receiving file with size = " << file_len;
 
-	bool first = true;
+#define CHUNK_SIZE 0x10000000
 
-#define CHUNK_SIZE 0x4000
+	bool first = true;
+	char *buffer = new char[CHUNK_SIZE];
+	int error_code = 0;
+
 	while (file_len > 0) {
-		char buffer[CHUNK_SIZE];
+		//char buffer[CHUNK_SIZE];
 		int bytes_read = recv(buffer, CHUNK_SIZE);
 		if (-1 == bytes_read) {
 			LOG(ERROR) << "Failed to receive data from server";
-			return -1;
+			error_code = -1;
+			goto cleanup;
 		}
 		if (first) {
 			first = false;
 			// Try to create new file
 			if (false == base::WriteFile(file_path, buffer, bytes_read)) {
 				LOG(ERROR) << "Can't create file " << file_path.value();
-				return -1;
+				error_code = -1;
+				goto cleanup;
 			}
 		} else {
 			if (false == base::AppendToFile(file_path, buffer, bytes_read)) {
 				LOG(ERROR) << "Can't write to file " << file_path.value();
-				return -1;
+				error_code = -1;
+				goto cleanup;
 			}
 		}
 		file_len -= bytes_read;
 	}
-	return 0;
+
+cleanup:
+	delete [] buffer;
+	return error_code;
 }
 
 //extern "C" EXPORT 

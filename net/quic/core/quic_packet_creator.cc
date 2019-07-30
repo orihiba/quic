@@ -14,6 +14,7 @@
 #include "net/quic/core/quic_data_writer.h"
 #include "net/quic/core/quic_flags.h"
 #include "net/quic/core/quic_utils.h"
+#include <iostream>
 
 using base::StringPiece;
 using std::make_pair;
@@ -188,6 +189,15 @@ InFecGroup QuicPacketCreator::MaybeUpdateLengthsAndStartFec() {
 		fec_group_.reset(nullptr);
 		return NOT_IN_FEC_GROUP;
 	}
+
+	if (current_fec_configuration == FEC_OFF) {
+		// TODO: should reset group?
+		if (fec_group_.get() != nullptr) {
+			std::cout << "fec_group is not null but conf is FEC_OFF. should reset?";
+		}
+		return NOT_IN_FEC_GROUP;
+	}
+
 	// Start a new FEC group since protection is on. Set the fec group number to
 	// the packet number of the next packet.
 	// Set fec configuration according to the current packet-loss
@@ -204,7 +214,7 @@ void QuicPacketCreator::MaybeStartFecProtection() {
 	DVLOG(1) << "Turning FEC protection ON";
 	// Flush current open packet.
 	Flush();
-
+	//std::cout << "Turning FEC protection ON" << std::endl;
 	StartFecProtectingPackets();
 	DCHECK(fec_protect_);
 }
@@ -328,6 +338,7 @@ bool QuicPacketCreator::ConsumeData(QuicStreamId id,
     packet_.num_padding_bytes = -1;
   }
 
+  // TODO is it necessary?
   if (fec_protection == MUST_FEC_PROTECT &&
 	  iov_offset + frame->stream_frame->data_length == iov.total_length) {
 	  // Turn off FEC protection when we're done writing protected data.
@@ -339,7 +350,8 @@ bool QuicPacketCreator::ConsumeData(QuicStreamId id,
 
 bool QuicPacketCreator::HasRoomForStreamFrame(QuicStreamId id,
                                               QuicStreamOffset offset) {
-  return BytesFree() > QuicFramer::GetMinStreamFrameSize(id, offset, true, fec_protect_ ? IN_FEC_GROUP : NOT_IN_FEC_GROUP);
+  //return BytesFree() > QuicFramer::GetMinStreamFrameSize(id, offset, true, programUseFec ? IN_FEC_GROUP : NOT_IN_FEC_GROUP);
+	return BytesFree() > QuicFramer::GetMinStreamFrameSize(id, offset, true, fec_group_.get() != nullptr ? IN_FEC_GROUP : NOT_IN_FEC_GROUP);
 }
 
 // static
@@ -390,8 +402,8 @@ void QuicPacketCreator::CreateStreamFrame(QuicStreamId id,
   const size_t data_size = iov.total_length - iov_offset;
   size_t min_frame_size = QuicFramer::GetMinStreamFrameSize(
       id, offset, /* last_frame_in_packet= */ true, is_in_fec_group);
-  // HIBA 2 for size. not sure if needed
-  size_t bytes_consumed = min<size_t>(BytesFree() - min_frame_size - 2, data_size);
+  // HIBA 3 for size of fec addtitions. TODO verify
+  size_t bytes_consumed = min<size_t>(programUseFec ? BytesFree() - min_frame_size - 3 : BytesFree() - min_frame_size, data_size);
 
   bool set_fin = fin && bytes_consumed == data_size;  // Last frame.
   UniqueStreamBuffer buffer =
@@ -659,7 +671,8 @@ size_t QuicPacketCreator::PacketSize() {
   packet_size_ = GetPacketHeaderSize(
       framer_->version(), connection_id_length_, send_version_in_packet_,
       send_path_id_in_packet_, IncludeNonceInPublicHeader(),
-      packet_.packet_number_length, fec_protect_ ? IN_FEC_GROUP : NOT_IN_FEC_GROUP);
+//      packet_.packet_number_length, fec_protect_ ? IN_FEC_GROUP : NOT_IN_FEC_GROUP);
+      packet_.packet_number_length, fec_group_.get() != nullptr ? IN_FEC_GROUP : NOT_IN_FEC_GROUP);
   return packet_size_;
 }
 

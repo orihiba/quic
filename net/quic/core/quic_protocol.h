@@ -82,7 +82,8 @@ static const size_t kLowestMaxPacketsPerFecGroup = 2;
 
 NET_EXPORT_PRIVATE extern FecConfiguration current_fec_configuration;
 
-NET_EXPORT_PRIVATE extern bool useFec;				// true if the program uses fec (can be enabled by user)
+NET_EXPORT_PRIVATE extern bool useFec;				// true if the program uses fec now
+NET_EXPORT_PRIVATE extern bool programUseFec;		// true if the program uses fec (can be enabled by user)
 NET_EXPORT_PRIVATE extern bool useRetransmission;	// true if the program uses retransmission (can be disabled by user) -- not used
 NET_EXPORT_PRIVATE extern bool losslessConnection;			// true if the program uses retransmission during FEC
 NET_EXPORT_PRIVATE extern size_t lostBytesDelta;

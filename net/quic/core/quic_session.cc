@@ -870,7 +870,13 @@ QuicNormalStream * QuicNormalSession::GetReadableStream(size_t len)
 	}
 
 	if (fifo_session_) {
-		if (stream->HasBytesToRead() || ((stream->bytes_remaining() != 0) && ((stream->data().size() >= stream->bytes_remaining()) || (stream->data().size() >= len)))) {
+		if (stream->HasBytesToRead() // got new data
+			|| 
+				((stream->bytes_remaining() != 0) && ((stream->data().size() >= stream->bytes_remaining()) || (stream->data().size() >= len))) // got more than one message or more than requested len 
+			|| 
+			(stream->data().size() > 0 && stream->bytes_remaining() == 0) // finished reading the message
+				)
+		{
 			return stream;
 		}
 	} else { // non fifo

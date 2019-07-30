@@ -89,10 +89,11 @@ ReliableQuicStream::ReliableQuicStream(QuicStreamId id, QuicSession* session)
 ReliableQuicStream::~ReliableQuicStream() {}
 
 void ReliableQuicStream::SetFromConfig() {
-	if (useFec)
-	{
-		fec_policy_ = MUST_FEC_PROTECT;
-	}	
+	if (id_ == 1) {
+		useFec = false;
+		current_fec_configuration = FEC_OFF;
+	}
+	if (programUseFec) { fec_policy_ = MUST_FEC_PROTECT; }
 }
 
 void ReliableQuicStream::OnStreamFrame(const QuicStreamFrame& frame) {
