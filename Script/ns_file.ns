@@ -1,0 +1,16 @@
+set ns [new Simulator]
+source tb_compat.tcl
+
+# Nodes
+set client [$ns node]
+set server [$ns node]
+
+# Lans
+# set lan0 [$ns make-lan "$node0 $node1" 100000.0kb 0.0ms]
+
+set link0 [$ns make-lan "$router $client" 100Mb 0.0ms]
+# tb-set-link-loss $link0 0.01
+
+# Enable routing
+$ns rtproto Static
+$ns run
