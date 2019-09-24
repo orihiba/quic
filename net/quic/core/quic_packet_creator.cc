@@ -190,7 +190,7 @@ InFecGroup QuicPacketCreator::MaybeUpdateLengthsAndStartFec() {
 		return NOT_IN_FEC_GROUP;
 	}
 
-	if (current_fec_configuration == FEC_OFF) {
+	if (current_fec_configuration == FEC_OFF && kDefaultMaxPacketsPerFecGroup == 0) { // if not manually assigned m and k
 		// TODO: should reset group?
 		if (fec_group_.get() != nullptr) {
 			std::cout << "fec_group is not null but conf is FEC_OFF. should reset?";
@@ -927,7 +927,7 @@ bool QuicPacketCreator::QuicRandomBoolSource::RandBool() {
 }
 
 void QuicPacketCreator::SerializeFec() {
-	if (fec_group_.get() == nullptr || fec_group_->NumSentPackets() <= 0 || fec_group_->fec_configuration == FEC_OFF) {
+	if (fec_group_.get() == nullptr || fec_group_->NumSentPackets() <= 0 || (fec_group_->fec_configuration == FEC_OFF && kDefaultMaxPacketsPerFecGroup == 0) /*if not manually assigned m and k*/) {
 		QUIC_BUG << "SerializeFEC called but no group or zero packets in group.";
 		return;
 	}

@@ -20,8 +20,8 @@ namespace net {
 const char* const kFinalOffsetHeaderKey = ":final-offset";
 
 // default values
-size_t kDefaultMaxPacketsPerFecGroup = 20;  // default k=20
-size_t kDefaultRecoveryBlocksCount = 10;	// default m=10
+size_t kDefaultMaxPacketsPerFecGroup = 0;  // default m=20
+size_t kDefaultRecoveryBlocksCount = 0;	// default k=10
 FecConfiguration current_fec_configuration = FEC_OFF; // defualt
 bool useFec = false;
 bool programUseFec = false;
@@ -41,12 +41,12 @@ void initCommandlineArgs()
 			if (!base::StringToInt(command_line->GetSwitchValueASCII("k"), &temp)) {
 				LOG(ERROR) << "k must be an integer\n";
 			}
-			kDefaultMaxPacketsPerFecGroup = (size_t)temp;
+			kDefaultRecoveryBlocksCount = (size_t)temp;
 
 			if (!base::StringToInt(command_line->GetSwitchValueASCII("m"), &temp)) {
 				LOG(ERROR) << "m must be an integer\n";
 			}
-			kDefaultRecoveryBlocksCount = (size_t)temp;
+			kDefaultMaxPacketsPerFecGroup= (size_t)temp;
 		}
 	}
 	if (command_line->HasSwitch("real_time"))

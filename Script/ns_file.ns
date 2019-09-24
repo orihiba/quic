@@ -1,15 +1,87 @@
 set ns [new Simulator]
 source tb_compat.tcl
 
-# Nodes
-set client [$ns node]
-set server [$ns node]
 
-# Lans
-# set lan0 [$ns make-lan "$node0 $node1" 100000.0kb 0.0ms]
+set client0 [$ns node]
+set server0 [$ns node]
+set link0 [$ns make-lan "$client0 $server0" 100Mb 0.0ms]
 
-set link0 [$ns make-lan "$router $client" 100Mb 0.0ms]
-# tb-set-link-loss $link0 0.01
+set client1 [$ns node]
+set server1 [$ns node]
+set link1 [$ns make-lan "$client1 $server1" 100Mb 0.0ms]
+
+set client2 [$ns node]
+set server2 [$ns node]
+set link2 [$ns make-lan "$client2 $server2" 100Mb 0.0ms]
+
+set client3 [$ns node]
+set server3 [$ns node]
+set link3 [$ns make-lan "$client3 $server3" 100Mb 0.0ms]
+
+set client4 [$ns node]
+set server4 [$ns node]
+set link4 [$ns make-lan "$client4 $server4" 100Mb 0.0ms]
+
+set client5 [$ns node]
+set server5 [$ns node]
+set link5 [$ns make-lan "$client5 $server5" 100Mb 0.0ms]
+
+set client6 [$ns node]
+set server6 [$ns node]
+set link6 [$ns make-lan "$client6 $server6" 100Mb 0.0ms]
+
+set client7 [$ns node]
+set server7 [$ns node]
+set link7 [$ns make-lan "$client7 $server7" 100Mb 0.0ms]
+
+set client8 [$ns node]
+set server8 [$ns node]
+set link8 [$ns make-lan "$client8 $server8" 100Mb 0.0ms]
+
+set client9 [$ns node]
+set server9 [$ns node]
+set link9 [$ns make-lan "$client9 $server9" 100Mb 0.0ms]
+
+set client10 [$ns node]
+set server10 [$ns node]
+set link10 [$ns make-lan "$client10 $server10" 100Mb 0.0ms]
+
+set client11 [$ns node]
+set server11 [$ns node]
+set link11 [$ns make-lan "$client11 $server11" 100Mb 0.0ms]
+
+set client12 [$ns node]
+set server12 [$ns node]
+set link12 [$ns make-lan "$client12 $server12" 100Mb 0.0ms]
+
+set client13 [$ns node]
+set server13 [$ns node]
+set link13 [$ns make-lan "$client13 $server13" 100Mb 0.0ms]
+
+set client14 [$ns node]
+set server14 [$ns node]
+set link14 [$ns make-lan "$client14 $server14" 100Mb 0.0ms]
+
+set client15 [$ns node]
+set server15 [$ns node]
+set link15 [$ns make-lan "$client15 $server15" 100Mb 0.0ms]
+
+set client16 [$ns node]
+set server16 [$ns node]
+set link16 [$ns make-lan "$client16 $server16" 100Mb 0.0ms]
+
+set client17 [$ns node]
+set server17 [$ns node]
+set link17 [$ns make-lan "$client17 $server17" 100Mb 0.0ms]
+
+set client18 [$ns node]
+set server18 [$ns node]
+set link18 [$ns make-lan "$client18 $server18" 100Mb 0.0ms]
+
+set client19 [$ns node]
+set server19 [$ns node]
+set link19 [$ns make-lan "$client19 $server19" 100Mb 0.0ms]
+
 
 # Enable routing
 $ns rtproto Static

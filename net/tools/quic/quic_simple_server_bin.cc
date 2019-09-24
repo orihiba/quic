@@ -36,6 +36,8 @@
 // The port the quic server will listen on.
 int32_t FLAGS_port = 6121;
 
+std::string FLAGS_input_file;
+
 std::unique_ptr<net::ProofSource> CreateProofSource(
     const base::FilePath& cert_path,
     const base::FilePath& key_path) {
@@ -107,6 +109,10 @@ void parse_command_line(size_t *max_delay, size_t *lost_bytes_delta, bool *is_fi
 			exit(1);
 		}
 	}
+	if (command_line->HasSwitch("input_file"))
+	{
+		FLAGS_input_file = command_line->GetSwitchValueASCII("input_file");
+	}
 }
 
 void server2()
@@ -133,7 +139,7 @@ void server2()
 		VLOG(1) << "Connection id is " << connection_id;
 
 #if defined(OS_POSIX)
-		auto file_path = base::BasicStringPiece<std::string>("file.txt");
+		auto file_path = base::BasicStringPiece<std::string>(FLAGS_input_file);
 #elif defined(OS_WIN)
 		auto file_path = base::BasicStringPiece<std::wstring>(L"file.txt");
 #endif
@@ -477,7 +483,7 @@ int QuicrServer::send_file_fifo(size_t connection_id, const FilePath &file_path)
 	size_t file_len = file_contents_.length();
 	size_t *file_len_ptr = new size_t[1];
 	file_len_ptr[0] = file_len;
-	std::cout << "Sending file " << file_path.value() << " with len " << file_len;
+	std::cout << "Sending file " << file_path.value() << " with len " << file_len << std::endl;
 	VLOG(2) << file_contents_;
 
 	// have to be FIFO because the size is sent here

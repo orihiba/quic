@@ -681,7 +681,9 @@ bool QuicConnection::OnUnauthenticatedHeader(const QuicPacketHeader& header) {
   // routed to this QuicConnection has been redirected before control reaches
   // here.
   DCHECK_EQ(connection_id_, header.public_header.connection_id);
-
+#ifdef HIBUG
+  std::cout << "Received packet " << header.packet_number << std::endl;
+#endif
   if (!packet_generator_.IsPendingPacketEmpty()) {
     // Incoming packets may change a queued ACK frame.
     const string error_details =
@@ -847,40 +849,62 @@ void QuicConnection::UpdateFecCofiguration(QuicPacketCount packets_received)
 
 	if (total_loss_rate < 0) {
 		current_fec_configuration = FEC_OFF;
-	}
-	else {
-
-		int loss_rate_group = (total_loss_rate * 100) / 2.5;
-		switch (loss_rate_group) {
-		case 0:
-		case 1:
+	} else {
+		//int loss_rate_group = (total_loss_rate * 100) / 2.5;
+		//switch (loss_rate_group) {
+		//case 0:
+		//	current_fec_configuration = FEC_OFF;
+		//	break;
+		//case 1:
+		//	current_fec_configuration = FEC_OFF;
+		//	break;
+		//case 2:
+		//	current_fec_configuration = FEC_100_5;
+		//	break;
+		//case 3:
+		//	current_fec_configuration = FEC_50_5;
+		//	break;
+		//case 4:
+		//	current_fec_configuration = FEC_20_5;
+		//	break;
+		//case 5:
+		//	current_fec_configuration = FEC_15_5;
+		//	break;
+		//default: // high loss rate
+		//	current_fec_configuration = FEC_10_5;
+		//	break;
+		//}
+		double loss_rate = total_loss_rate * 100;
+		if (loss_rate <= 5) {
 			current_fec_configuration = FEC_OFF;
-			break;
-		case 2:
+		} else if (loss_rate <= 7) {
 			current_fec_configuration = FEC_100_5;
-			break;
-		case 3:
+		} else if (loss_rate <= 9) {
 			current_fec_configuration = FEC_50_5;
-			break;
-		case 4:
+		} else if (loss_rate <= 12.5) {
 			current_fec_configuration = FEC_20_5;
-			break;
-		case 5:
+		} else if (loss_rate <= 15) {
 			current_fec_configuration = FEC_15_5;
-			break;
-		default: // high loss rate
+		} else { // high loss rate
 			current_fec_configuration = FEC_10_5;
-			break;
 		}
 	}
 	
-	if (current_fec_configuration == FEC_OFF) {
+	if (current_fec_configuration == FEC_OFF && kDefaultMaxPacketsPerFecGroup == 0) { // if not manually assigned m and k
 		useFec = false;
 	} else {
 		useFec = true;
 	}
 	DVLOG(1) << "current_fec_configuration: " << current_fec_configuration;
-	std::cout << "current_fec_configuration: " << current_fec_configuration << std::endl;
+
+	/*static time_t last = 0;
+	time_t curr = time(NULL);
+	if (!last || (curr - last > 5)) {
+		last = curr;
+
+		auto stats = GetStats();
+		std::cout << "total_loss_rate: " << total_loss_rate << " min_rtt: " << stats.min_rtt_us << " srtt: " << stats.srtt_us << " current_fec_configuration: " << current_fec_configuration << std::endl;
+	}*/
 }
 
 bool QuicConnection::OnAckFrame(const QuicAckFrame& incoming_ack) {
@@ -1542,6 +1566,7 @@ const QuicConnectionStats& QuicConnection::GetStats() {
 void QuicConnection::ProcessUdpPacket(const IPEndPoint& self_address,
                                       const IPEndPoint& peer_address,
                                       const QuicReceivedPacket& packet) {
+	//std::cout << "Got packet!" << std::endl;
 	idle_timeout_alarm_->Update(clock_->ApproximateNow() + new_idle_network_timeout_, QuicTime::Delta::Zero());
 	if (!losslessConnection) {
 		faster_idle_timeout_alarm_->Update(clock_->ApproximateNow() + new_faster_idle_network_timeout_, QuicTime::Delta::Zero());
@@ -1550,12 +1575,13 @@ void QuicConnection::ProcessUdpPacket(const IPEndPoint& self_address,
   if (!connected_) {
     return;
   }
-
+//#define LOSS
 #ifdef LOSS
   static int number_of_packets = 1;
   if (perspective_ == Perspective::IS_CLIENT) {
 	//  if (number_of_packets++ == 4) { return; }
-	 if (/*(number_of_packets >= 3 && number_of_packets <= 5) ||*/ (number_of_packets >= 60 && number_of_packets <= 70)/* || (number_of_packets >= 65 && number_of_packets <= 66)*/ /*|| (number_of_packets >= 29 && number_of_packets <= 33) || (number_of_packets >= 36 && number_of_packets <= 40)*/)
+	 //if (/*(number_of_packets >= 3 && number_of_packets <= 5) ||*/ (number_of_packets >= 60 && number_of_packets <= 70)/* || (number_of_packets >= 65 && number_of_packets <= 66)*/ /*|| (number_of_packets >= 29 && number_of_packets <= 33) || (number_of_packets >= 36 && number_of_packets <= 40)*/)
+	  if (number_of_packets > 8 && number_of_packets % 4 == 0)
 	 {
 	   number_of_packets++;
 		  return;
@@ -1994,7 +2020,9 @@ bool QuicConnection::WritePacket(SerializedPacket* packet) {
       return false;
     }
   }
-
+#ifdef HIBUG
+  std::cout << "Sent packet " << packet->packet_number << std::endl;
+#endif
   if (result.status != WRITE_STATUS_ERROR && debug_visitor_ != nullptr) {
     // Pass the write result to the visitor.
     debug_visitor_->OnPacketSent(*packet, packet->original_path_id,
@@ -2406,7 +2434,9 @@ void QuicConnection::MaybeProcessRevivedPacket() {
 		revived_header.public_header.reset_flag = false;
 		revived_header.public_header.packet_number_length = (*it)->packet_number_len;
         DVLOG(1) << "revived packet number " << revived_header.packet_number << " has number len: " << (*it)->packet_number_len;
-
+#ifdef HIBUG
+		std::cout << "Revived packets " << revived_header.packet_number << std::endl;
+#endif
 		revived_header.fec_flag = false;
 		revived_header.is_in_fec_group = NOT_IN_FEC_GROUP;
 		revived_header.fec_group = last_header_.fec_group;

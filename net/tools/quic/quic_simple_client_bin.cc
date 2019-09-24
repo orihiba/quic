@@ -119,6 +119,8 @@ bool FLAGS_redirect_is_success = true;
 // Initial MTU of the connection.
 int32_t FLAGS_initial_mtu = 0;
 
+string FLAGS_output_file = "output_file.txt";
+
 class FakeCertVerifier : public net::CertVerifier {
  public:
   int Verify(const RequestParams& params,
@@ -195,6 +197,10 @@ void parse_command_line(size_t *max_delay, size_t *lost_bytes_delta, bool *is_fi
 			exit(1);
 		}
 	}
+	if (command_line->HasSwitch("output_file"))
+	{
+		FLAGS_output_file = command_line->GetSwitchValueASCII("output_file");
+	}
 }
 
 void client2()
@@ -258,7 +264,7 @@ void client2()
 	//std::cout << "Received8: " << buffer << std::endl;
 
 #if defined(OS_POSIX)
-	auto file_path = base::BasicStringPiece<std::string>("client_file.txt");
+	auto file_path = base::BasicStringPiece<std::string>(FLAGS_output_file);
 #elif defined(OS_WIN)
 	auto file_path = base::BasicStringPiece<std::wstring>(L"client_file.txt");
 #endif
@@ -782,7 +788,7 @@ int QuicrClient::recv_file(const FilePath &file_path)
 		return -1;
 	}
 
-	std::cout << "Receiving file with size = " << file_len;
+	std::cout << "Receiving file with size = " << file_len << std::endl;
 
 #define CHUNK_SIZE 0x10000000
 

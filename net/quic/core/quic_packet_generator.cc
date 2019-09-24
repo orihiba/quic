@@ -130,8 +130,8 @@ QuicConsumedData QuicPacketGenerator::ConsumeData(
   }
   // Try to close FEC group since we've either run out of data to send or we're
   // blocked.
-  packet_creator_.MaybeSendFecPacketAndCloseGroup(/*force_send_fec=*/false,
-	  /*is_fec_timeout=*/false);
+  //packet_creator_.MaybeSendFecPacketAndCloseGroup(/*force_send_fec=*/false,
+	 // /*is_fec_timeout=*/false);
 
   DCHECK(InBatchMode() || !packet_creator_.HasPendingFrames());
   return QuicConsumedData(total_bytes_consumed, fin_consumed);

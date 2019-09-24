@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include "net/quic/core/reliable_quic_stream.h"
-
+#include <iostream>
 #include "base/logging.h"
 #include "net/quic/core/iovector.h"
 #include "net/quic/core/quic_bug_tracker.h"
@@ -330,6 +330,13 @@ QuicConsumedData ReliableQuicStream::WritevData(
                       stream_bytes_written_, fin, ack_listener);
   stream_bytes_written_ += consumed_data.bytes_consumed;
 
+#ifdef HIBUG
+  static int i = 0;
+  if (stream_bytes_written_ > (uint64_t)(i * 0x10000)) {
+	  i++;
+	  std::cout << "stream_bytes_written_: " << stream_bytes_written_ << " " << iov->iov_len << std::endl;
+  }
+#endif
   AddBytesSent(consumed_data.bytes_consumed);
 
   // The write may have generated a write error causing this stream to be

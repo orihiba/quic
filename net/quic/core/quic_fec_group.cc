@@ -22,6 +22,10 @@ namespace net {
 
 QuicPacketCount k_from_conf(FecConfiguration conf)
 {
+	// check if manually entered k
+	if (kDefaultMaxPacketsPerFecGroup != 0) {
+		return kDefaultMaxPacketsPerFecGroup;
+	}
 	switch (conf) {
 	case FEC_100_5:
 		return 100;
@@ -33,6 +37,9 @@ QuicPacketCount k_from_conf(FecConfiguration conf)
 		return 15;
 	case FEC_10_5:
 		return 10;
+	case FEC_OFF:
+		DLOG(ERROR) << "fec configuration is FEC_OFF in fec group: " << conf;
+		return 0;
 	default:
 		DLOG(ERROR) << "unknown fec configuration in fec group: " << conf;
 		return 0;
@@ -41,6 +48,10 @@ QuicPacketCount k_from_conf(FecConfiguration conf)
 
 QuicPacketCount m_from_conf(FecConfiguration conf)
 {
+	// check if manually entered m
+	if (kDefaultRecoveryBlocksCount != 0) {
+		return kDefaultRecoveryBlocksCount;
+	}
 	switch (conf) {
 	case FEC_100_5:
 	case FEC_50_5:
@@ -48,6 +59,9 @@ QuicPacketCount m_from_conf(FecConfiguration conf)
 	case FEC_15_5:
 	case FEC_10_5:
 		return 5;
+	case FEC_OFF:
+		DLOG(ERROR) << "fec configuration is FEC_OFF in fec group: " << conf;
+		return 0;
 	default:
 		DLOG(ERROR) << "unknown fec configuration in fec group: " << conf;
 		return 0;
