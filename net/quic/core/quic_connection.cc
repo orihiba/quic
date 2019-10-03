@@ -795,6 +795,49 @@ bool QuicConnection::OnStreamFrame(const QuicStreamFrame& frame) {
   return connected_;
 }
 
+const char * printFecConf(FecConfiguration conf)
+{
+	switch (conf) {
+	case FEC_OFF:
+		return "FEC_OFF";
+	case FEC_100_5:
+		return "FEC_100_5";
+	case FEC_50_5:
+		return "FEC_50_5";
+	case FEC_20_5:
+		return "FEC_20_5";
+	case FEC_15_5:
+		return "FEC_15_5";
+	case FEC_10_5:
+		return "FEC_10_5";
+	case FEC_175_5:
+		return "FEC_175_5";
+	case FEC_70_5:
+		return "FEC_70_5";
+	case FEC_210_65:
+		return "FEC_210_65";
+	case FEC_170_5:
+		return "FEC_170_5";
+	case FEC_30_10:
+		return "FEC_30_10";
+	case FEC_85_15:
+		return "FEC_85_15";
+	case FEC_20_10:
+		return "FEC_20_10";
+	case FEC_35_15:
+		return "FEC_35_15";
+	case FEC_250_45:
+		return "FEC_250_45";
+	case FEC_205_35:
+		return "FEC_205_35";
+	case FEC_35_35:
+		return "FEC_35_35";
+	case FEC_15_15:
+		return "FEC_15_15";
+	}
+	return "NO SUCH FEC CONF";
+}
+
 void QuicConnection::UpdateFecCofiguration(QuicPacketCount packets_received)
 {
 	QuicPacketNumber highest_acked = sent_packet_manager_->GetLargestNewlyAcked();
@@ -847,48 +890,107 @@ void QuicConnection::UpdateFecCofiguration(QuicPacketCount packets_received)
 	last_packets_sent = packets_sent;
 	last_packets_received = packets_received;
 
-	if (total_loss_rate < 0) {
-		current_fec_configuration = FEC_OFF;
-	} else {
-		//int loss_rate_group = (total_loss_rate * 100) / 2.5;
-		//switch (loss_rate_group) {
-		//case 0:
-		//	current_fec_configuration = FEC_OFF;
-		//	break;
-		//case 1:
-		//	current_fec_configuration = FEC_OFF;
-		//	break;
-		//case 2:
-		//	current_fec_configuration = FEC_100_5;
-		//	break;
-		//case 3:
-		//	current_fec_configuration = FEC_50_5;
-		//	break;
-		//case 4:
-		//	current_fec_configuration = FEC_20_5;
-		//	break;
-		//case 5:
-		//	current_fec_configuration = FEC_15_5;
-		//	break;
-		//default: // high loss rate
-		//	current_fec_configuration = FEC_10_5;
-		//	break;
-		//}
-		double loss_rate = total_loss_rate * 100;
-		if (loss_rate <= 5) {
+	double loss_rate = total_loss_rate * 100;
+
+	auto stats = GetStats();
+	auto rtt = stats.min_rtt_us / 1000; // in ms
+	if (loss_rate <= 0.2) { // 0
+		if (rtt < 5) {
 			current_fec_configuration = FEC_OFF;
-		} else if (loss_rate <= 7) {
-			current_fec_configuration = FEC_100_5;
-		} else if (loss_rate <= 9) {
-			current_fec_configuration = FEC_50_5;
-		} else if (loss_rate <= 12.5) {
+		} else if (rtt < 50) {
+			current_fec_configuration = FEC_175_5;
+		} else if (rtt < 500) {
+			current_fec_configuration = FEC_70_5;
+		} else { // rtt >= 500ms
+			current_fec_configuration = FEC_210_65;
+		}
+	} if (loss_rate <= 2) { // 0.9
+		if (rtt < 5) {
+			current_fec_configuration = FEC_170_5;
+		} else if (rtt < 50) {
+			current_fec_configuration = FEC_30_10;
+		} else if (rtt < 500) {
+			current_fec_configuration = FEC_85_15;
+		} else { // rtt >= 500ms
+			current_fec_configuration = FEC_20_10;
+		}
+	} else if (loss_rate <= 4) { // 3
+		//if (rtt < 5) {
 			current_fec_configuration = FEC_20_5;
-		} else if (loss_rate <= 15) {
+		//} else if (rtt < 50) {
+		//} else if (rtt < 500) {
+		//} else { // rtt >= 500ms
+		//}
+	} else if (loss_rate <= 11) { // 9
+		if (rtt < 5) {
 			current_fec_configuration = FEC_15_5;
-		} else { // high loss rate
+		} else if (rtt < 50) {
+			current_fec_configuration = FEC_20_5; // can be 15/5
+		} else if (rtt < 500) {
+			current_fec_configuration = FEC_35_15; // can be 15/5
+		} else { // rtt >= 500ms
 			current_fec_configuration = FEC_10_5;
 		}
+	} else if (loss_rate <= 35) { // 30
+		if (rtt < 5) {
+			current_fec_configuration = FEC_250_45;
+		} else if (rtt < 50) {
+			current_fec_configuration = FEC_205_35;
+		} else if (rtt < 500) {
+			current_fec_configuration = FEC_35_35;
+		} else { // rtt >= 500ms
+			current_fec_configuration = FEC_15_15;
+		}
+	} else { // 90
+		//if (rtt < 5) {
+		//} else if (rtt < 50) {
+		//} else if (rtt < 500) {
+		//} else { // rtt >= 500ms
+		//}
 	}
+
+
+	//int loss_rate_group = (total_loss_rate * 100) / 2.5;
+	//switch (loss_rate_group) {
+	//case 0:
+	//	current_fec_configuration = FEC_OFF;
+	//	break;
+	//case 1:
+	//	current_fec_configuration = FEC_OFF;
+	//	break;
+	//case 2:
+	//	current_fec_configuration = FEC_100_5;
+	//	break;
+	//case 3:
+	//	current_fec_configuration = FEC_50_5;
+	//	break;
+	//case 4:
+	//	current_fec_configuration = FEC_20_5;
+	//	break;
+	//case 5:
+	//	current_fec_configuration = FEC_15_5;
+	//	break;
+	//default: // high loss rate
+	//	current_fec_configuration = FEC_10_5;
+	//	break;
+	//}
+
+		
+	//double loss_rate = total_loss_rate * 100;
+	//if (loss_rate <= 5) {
+	//	current_fec_configuration = FEC_OFF;
+	//} else if (loss_rate <= 7) {
+	//	current_fec_configuration = FEC_100_5;
+	//} else if (loss_rate <= 9) {
+	//	current_fec_configuration = FEC_50_5;
+	//} else if (loss_rate <= 12.5) {
+	//	current_fec_configuration = FEC_20_5;
+	//} else if (loss_rate <= 15) {
+	//	current_fec_configuration = FEC_15_5;
+	//} else { // high loss rate
+	//	current_fec_configuration = FEC_10_5;
+	//}
+	
 	
 	if (current_fec_configuration == FEC_OFF && kDefaultMaxPacketsPerFecGroup == 0) { // if not manually assigned m and k
 		useFec = false;
@@ -897,14 +999,19 @@ void QuicConnection::UpdateFecCofiguration(QuicPacketCount packets_received)
 	}
 	DVLOG(1) << "current_fec_configuration: " << current_fec_configuration;
 
-	/*static time_t last = 0;
-	time_t curr = time(NULL);
-	if (!last || (curr - last > 5)) {
-		last = curr;
+	auto m = QuicFecGroup::m_from_conf(current_fec_configuration);
+	sent_packet_manager_->setNacksNumber(m);
 
-		auto stats = GetStats();
-		std::cout << "total_loss_rate: " << total_loss_rate << " min_rtt: " << stats.min_rtt_us << " srtt: " << stats.srtt_us << " current_fec_configuration: " << current_fec_configuration << std::endl;
-	}*/
+	//std::cout << "current loss rate: " << loss_rate << std::endl;
+
+	//static time_t last = 0;
+	//time_t curr = time(NULL);
+	//if (!last || (curr - last > 5)) {
+	//	last = curr;
+
+	//	//auto stats = GetStats();
+	//	std::cout << "total_loss_rate: " << total_loss_rate << " rtt: " << rtt << " current_fec_configuration: " << printFecConf(current_fec_configuration) << std::endl;
+	//}
 }
 
 bool QuicConnection::OnAckFrame(const QuicAckFrame& incoming_ack) {
@@ -1575,7 +1682,7 @@ void QuicConnection::ProcessUdpPacket(const IPEndPoint& self_address,
   if (!connected_) {
     return;
   }
-//#define LOSS
+#define LOSS
 #ifdef LOSS
   static int number_of_packets = 1;
   if (perspective_ == Perspective::IS_CLIENT) {

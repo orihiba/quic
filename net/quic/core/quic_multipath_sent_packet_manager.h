@@ -38,6 +38,9 @@ class NET_EXPORT_PRIVATE QuicMultipathSentPacketManager
   // Start implementation of QuicSentPacketManagerInterface.
   // Sets all paths from |config|.
   void SetFromConfig(const QuicConfig& config) override;
+  
+  void setNacksNumber(QuicPacketCount nacks) override;
+
   QuicConnectionStats* getStats() override;
   QuicPacketNumber GetUnackedNumber() override;
   // Resumes connection state on the default path.

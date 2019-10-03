@@ -34,6 +34,10 @@ void QuicMultipathSentPacketManager::SetFromConfig(const QuicConfig& config) {
     }
   }
 }
+void QuicMultipathSentPacketManager::setNacksNumber(QuicPacketCount nacks)
+{
+}
+
 QuicConnectionStats* QuicMultipathSentPacketManager::getStats()  { return nullptr; }
 QuicPacketNumber QuicMultipathSentPacketManager::GetUnackedNumber()  { return 0; }
 

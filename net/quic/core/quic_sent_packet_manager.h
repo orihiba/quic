@@ -81,6 +81,8 @@ class NET_EXPORT_PRIVATE QuicSentPacketManager
   // Start implementation of QuicSentPacketManagerInterface.
   void SetFromConfig(const QuicConfig& config) override;
 
+  void setNacksNumber(QuicPacketCount nacks)  override;
+  
   QuicConnectionStats* getStats() override;
   QuicPacketNumber GetUnackedNumber() override;
   // Pass the CachedNetworkParameters to the send algorithm.

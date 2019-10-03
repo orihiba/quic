@@ -20,7 +20,7 @@ using std::set;
 
 namespace net {
 
-QuicPacketCount k_from_conf(FecConfiguration conf)
+QuicPacketCount QuicFecGroup::k_from_conf(FecConfiguration conf)
 {
 	// check if manually entered k
 	if (kDefaultMaxPacketsPerFecGroup != 0) {
@@ -37,6 +37,32 @@ QuicPacketCount k_from_conf(FecConfiguration conf)
 		return 15;
 	case FEC_10_5:
 		return 10;
+
+	case FEC_170_5:
+		return 170;
+	case FEC_175_5:
+		return 175;
+	case FEC_70_5:
+		return 70;
+	case FEC_210_65:
+		return 210;
+	case FEC_30_10:
+		return 30;
+	case FEC_20_10:
+		return 20;
+	case FEC_85_15:
+		return 85;
+	case FEC_35_15:
+		return 35;
+	case FEC_15_15:
+		return 15;
+	case FEC_250_45:
+		return 250;
+	case FEC_205_35:
+		return 205;
+	case FEC_35_35:
+		return 35;
+
 	case FEC_OFF:
 		DLOG(ERROR) << "fec configuration is FEC_OFF in fec group: " << conf;
 		return 0;
@@ -46,7 +72,7 @@ QuicPacketCount k_from_conf(FecConfiguration conf)
 	}
 }
 
-QuicPacketCount m_from_conf(FecConfiguration conf)
+QuicPacketCount QuicFecGroup::m_from_conf(FecConfiguration conf)
 {
 	// check if manually entered m
 	if (kDefaultRecoveryBlocksCount != 0) {
@@ -58,7 +84,31 @@ QuicPacketCount m_from_conf(FecConfiguration conf)
 	case FEC_20_5:
 	case FEC_15_5:
 	case FEC_10_5:
+
+	case FEC_170_5:
+	case FEC_175_5:
+	case FEC_70_5:
 		return 5;
+
+	case FEC_210_65:
+		return 65;
+
+	case FEC_30_10:
+	case FEC_20_10:
+		return 10;
+	
+	case FEC_85_15:
+	case FEC_35_15:
+	case FEC_15_15:
+		return 15;
+
+	case FEC_250_45:
+		return 45;
+
+	case FEC_205_35:
+	case FEC_35_35:
+		return 35;
+
 	case FEC_OFF:
 		DLOG(ERROR) << "fec configuration is FEC_OFF in fec group: " << conf;
 		return 0;

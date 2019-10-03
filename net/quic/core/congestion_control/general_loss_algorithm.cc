@@ -166,4 +166,9 @@ void GeneralLossAlgorithm::SpuriousRetransmitDetected(
   } while (proposed_extra_time < extra_time_needed && reordering_shift_ > 0);
 }
 
+void GeneralLossAlgorithm::setNacksNumber(QuicPacketCount nacks)
+{
+	kNumberOfNacksBeforeRetransmission = nacks;
+}
+
 }  // namespace net

@@ -105,7 +105,7 @@ def wait_for_finish(in_use):
         
 def get_available_nodes():
     ips = []
-    for i in xrange(30):
+    for i in xrange(0,30):
         server_name = "server%d" % i
         ip = run_ssh_read_output("client0", "ping %s -c 1 | cut -d '(' -f 2 | cut -d ')' -f 1 | head -n 1" % server_name)
         print ip
@@ -120,7 +120,7 @@ def get_available_nodes():
 weights_loss = {0:0, 0.9:1, 3:2, 9:3, 30:5, 90:7}
 weights_delay = {0:0, 5:2, 50:5, 500:7}
     
-def main(loss_rates, latencies, protocols, times, configure):
+def main(loss_rates, latencies, protocols, times, manual_fec, configure):
     pool, server_ips = get_available_nodes() # [0, 1, 2], [1.1.1.1, 2.2.2.2, 3.3.3.3]
     available_pool = pool[:]
     in_use = []
@@ -130,47 +130,60 @@ def main(loss_rates, latencies, protocols, times, configure):
     
     configurations = [(delay, loss_rate) for delay in latencies for loss_rate in loss_rates]
     for delay, loss_rate in configurations:
+        # if delay != 500 and loss_rate == 9.0:
+            # print "skipping", delay, loss_rate
+            # continue
+        
         print "Running with %.1f%%, %dms" % (loss_rate, delay)
+      
+        file_size = 10
+        # file_size = 100
+        # weight = weights_loss[loss_rate] * weights_delay[delay]
         
-        file_size = 100
-        weight = weights_loss[loss_rate] * weights_delay[delay]
-        
-        if weight < 5:
-            file_size = 100
-        elif weight <= 10:
-            file_size = 20
-        elif weight <= 20:
-            file_size = 10
-        elif weight <= 30:
-            file_size = 5
-        else:
-            file_size = 1
-        
-        done = [] # don't delete
-        
-        
-        # to_do = [(m, k) for m in xrange(3,31) for k in xrange(3,16)] + [(m, k) for m in xrange(50,80,5) for k in xrange(3,16)]
-        to_do = [(m, k) for m in xrange(10,100,5) for k in xrange(5,80,5) if m >= k]
-        # to_do = [(m, k) for m in xrange(150,250,5) for k in xrange(20,60,5) if m >= k]
-        # done = [(m, k) for m in xrange(50,150,5) for k in xrange(20,80,5) if m >= k] + [(m, k) for m in xrange(150,200,5) for k in xrange(30,100,5) if m >= k]
-        
-        
-        # to_do = [(m, k) for m in xrange(200,400,5) for k in xrange(5,200,5) if m >= k]
-        
-        
-        # if delay == 5:
-            # done = []
-            # done = [(m, k) for m in xrange(100,200,10) for k in xrange(40,100,10) if m >= k] + [(m, k) for m in xrange(150,200,10) for k in xrange(40,90,10) if m >= k]
-            # to_do = [(m, k) for m in xrange(160,240,5) for k in xrange(20,100,5) if m >= k]
+        # if weight < 5:
+            # file_size = 100
+        # elif weight <= 10:
+            # file_size = 20
+        # elif weight <= 20:
+            # file_size = 10
+        # elif weight <= 30:
+            # file_size = 5
         # else:
-            # done = [(m, k) for m in xrange(80,140,10) for k in xrange(30,70,10) if m >= k] + [(m, k) for m in xrange(40,80,10) for k in xrange(10,80,10) if m >= k] + [(m, k) for m in xrange(140,200,10) for k in xrange(10,150,10) if m >= k] + [(m, k) for m in xrange(100,180,5) for k in xrange(10,150,5) if m >= k]
-            # done += [(m, k) for m in xrange(100,200,5) for k in xrange(10,150,5) if m >= k]
-            # done += [(m, k) for m in xrange(200,220,5) for k in xrange(10,150,5) if m >= k]
-            # done += [(m, k) for m in xrange(60,95,5) for k in xrange(10,150,5) if m >= k]
-            # to_do = [(m, k) for m in xrange(60,250,5) for k in xrange(10,150,5) if m >= k]
+            # file_size = 1
         
-        left_to_do = list(set(to_do) - set(done))
-        left_to_do.sort()
+        if not manual_fec:
+            left_to_do = [(0, 0)]
+        else:
+            done = [] # don't delete
+            
+            
+            
+            # to_do = [(m, k) for m in xrange(3,31) for k in xrange(3,16)] + [(m, k) for m in xrange(50,80,5) for k in xrange(3,16)]
+            
+            # to_do = [(m, k) for m in xrange(150,250,5) for k in xrange(20,60,5) if m >= k]
+            # done = [(m, k) for m in xrange(50,150,5) for k in xrange(20,80,5) if m >= k] + [(m, k) for m in xrange(150,200,5) for k in xrange(30,100,5) if m >= k]
+            
+            
+            # to_do = [(m, k) for m in xrange(200,400,5) for k in xrange(5,200,5) if m >= k]
+            
+            
+            
+            
+            # done = [(m, k) for m in xrange(10,200,5) for k in xrange(5,80,5) if m >= k]
+            to_do = [(m, k) for m in xrange(80,250,5) for k in xrange(5,100,5) if m >= k]
+                # to_do = [(m, k) for m in xrange(70,100,5) for k in xrange(5,60,5) if m >= k]
+                # done = []
+                # done = [(m, k) for m in xrange(100,200,10) for k in xrange(40,100,10) if m >= k] + [(m, k) for m in xrange(150,200,10) for k in xrange(40,90,10) if m >= k]
+                # to_do = [(m, k) for m in xrange(160,240,5) for k in xrange(20,100,5) if m >= k]
+            
+                # done = [(m, k) for m in xrange(80,140,10) for k in xrange(30,70,10) if m >= k] + [(m, k) for m in xrange(40,80,10) for k in xrange(10,80,10) if m >= k] + [(m, k) for m in xrange(140,200,10) for k in xrange(10,150,10) if m >= k] + [(m, k) for m in xrange(100,180,5) for k in xrange(10,150,5) if m >= k]
+                # done += [(m, k) for m in xrange(100,200,5) for k in xrange(10,150,5) if m >= k]
+                # done += [(m, k) for m in xrange(200,220,5) for k in xrange(10,150,5) if m >= k]
+                # done += [(m, k) for m in xrange(60,95,5) for k in xrange(10,150,5) if m >= k]
+                # to_do = [(m, k) for m in xrange(10,150,5) for k in xrange(5,60,5) if m >= k]
+            
+            left_to_do = list(set(to_do) - set(done))
+            left_to_do.sort()
 
         
         print "Total test scenarios:", len(left_to_do)
@@ -199,6 +212,7 @@ def main(loss_rates, latencies, protocols, times, configure):
             run_tests(times, file_name, protocols, server_ip, curr, m, k) # should get file id and server ip
     
     while len(in_use) != 0:
+        print len(in_use), "clients are still working.."
         wait_for_finish(in_use)
     
     print "all clients finished"
@@ -211,15 +225,16 @@ if __name__ == "__main__":
     configure = True
     
     if len(sys.argv) != 1:
-        if len(sys.argv) != 6:
-            print "Usage: *.py <loss_rates> <latencies> <protocols> <should_configure>"
+        if len(sys.argv) != 7:
+            print "Usage: *.py <loss_rates> <latencies> <protocols> <manual FEC> <should_configure>"
             sys.exit(1)
             
         loss_rates = [float(i) for i in sys.argv[1].split(',')]
         latencies  = [int(i) for i in sys.argv[2].split(',')]
         protocols  = sys.argv[3]
         times      = int(sys.argv[4])
-        configure   = True if sys.argv[5] == "True" else False
+        manual_fec   = True if sys.argv[5] == "True" else False
+        configure   = True if sys.argv[6] == "True" else False
 
-    main(loss_rates, latencies, protocols, times, configure)
+    main(loss_rates, latencies, protocols, times, manual_fec, configure)
     

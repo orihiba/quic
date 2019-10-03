@@ -41,6 +41,8 @@ class NET_EXPORT_PRIVATE QuicFecGroup {
   virtual ~QuicFecGroup();
 
   FecConfiguration fec_configuration;
+  static QuicPacketCount m_from_conf(FecConfiguration conf);
+  static QuicPacketCount k_from_conf(FecConfiguration conf);
 
   bool UpdateReceivedList(EncryptionLevel encryption_level,
               const QuicPacketHeader& header,

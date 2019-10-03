@@ -69,6 +69,19 @@ enum FecConfiguration {
 	FEC_20_5, // 10 %
 	FEC_15_5, // 12.5 %
 	FEC_10_5, // 15 % (15 5 is almost the same)
+
+	FEC_175_5,
+	FEC_70_5,
+	FEC_210_65,
+	FEC_170_5,
+	FEC_30_10,
+	FEC_85_15,
+	FEC_20_10,
+	FEC_35_15,
+	FEC_250_45,
+	FEC_205_35,
+	FEC_35_35,
+	FEC_15_15,
 };
 
 // Default max packets in an FEC group.

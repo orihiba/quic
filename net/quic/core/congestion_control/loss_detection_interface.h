@@ -31,6 +31,8 @@ class NET_EXPORT_PRIVATE LossDetectionInterface {
       QuicPacketNumber largest_newly_acked,
       SendAlgorithmInterface::CongestionVector* packets_lost) = 0;
 
+  virtual void setNacksNumber(QuicPacketCount nacks) = 0;
+
   // Get the time the LossDetectionAlgorithm wants to re-evaluate losses.
   // Returns QuicTime::Zero if no alarm needs to be set.
   virtual QuicTime GetLossTimeout() const = 0;

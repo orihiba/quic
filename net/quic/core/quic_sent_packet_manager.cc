@@ -171,6 +171,11 @@ void QuicSentPacketManager::SetFromConfig(const QuicConfig& config) {
   }
 }
 
+void QuicSentPacketManager::setNacksNumber(QuicPacketCount nacks)
+{
+	loss_algorithm_->setNacksNumber(nacks);
+}
+
 void QuicSentPacketManager::ResumeConnectionState(
     const CachedNetworkParameters& cached_network_params,
     bool max_bandwidth_resumption) {

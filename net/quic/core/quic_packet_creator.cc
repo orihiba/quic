@@ -116,7 +116,7 @@ bool QuicPacketCreator::ShouldSendFec(bool force_close) const {
 	return fec_group_.get() != nullptr && fec_group_->NumSentPackets() > 0 &&
 		(force_close ||
 	//	fec_group_->NumSentPackets() >= max_packets_per_fec_group_);
-		fec_group_->NumSentPackets() >= k_from_conf(fec_group_->fec_configuration));
+		fec_group_->NumSentPackets() >= QuicFecGroup::k_from_conf(fec_group_->fec_configuration));
 }
 
 void QuicPacketCreator::ResetFecGroup() {

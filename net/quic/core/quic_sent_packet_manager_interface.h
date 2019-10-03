@@ -66,6 +66,8 @@ class NET_EXPORT_PRIVATE QuicSentPacketManagerInterface {
 
   virtual void SetFromConfig(const QuicConfig& config) = 0;
 
+  virtual void setNacksNumber(QuicPacketCount nacksNum) = 0;
+
   // Resumes connection state on the default path.
   virtual void ResumeConnectionState(
       const CachedNetworkParameters& cached_network_params,

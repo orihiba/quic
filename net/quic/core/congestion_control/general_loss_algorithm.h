@@ -55,6 +55,8 @@ class NET_EXPORT_PRIVATE GeneralLossAlgorithm : public LossDetectionInterface {
 
   int reordering_shift() const { return reordering_shift_; }
 
+  void setNacksNumber(QuicPacketCount nacks) override;
+
  private:
   QuicTime loss_detection_timeout_;
   // Largest sent packet when a spurious retransmit is detected.
