@@ -76,6 +76,7 @@
 #include "net/tools/quic/quic_simple_client.h"
 #include "net/tools/quic/synchronous_host_resolver.h"
 #include "url/gurl.h"
+#include "base/threading/platform_thread.h"
 
 #include "net//tools/quic/quicr_api.h"
 
@@ -120,6 +121,7 @@ bool FLAGS_redirect_is_success = true;
 int32_t FLAGS_initial_mtu = 0;
 
 string FLAGS_output_file = "output_file.txt";
+string FLAGS_connection_file = "connection_file.txt";
 
 class FakeCertVerifier : public net::CertVerifier {
  public:
@@ -152,6 +154,7 @@ public:
 	bool connect(const char *host, uint16_t port);
 	int send(const char *data, size_t len, bool end_of_message);
 	int send(const char *data, size_t len);
+	int sendWholeMessage(const char *data, size_t len);
 	int recv(char *buffer, size_t max_len);
 	int recv_file(const FilePath &file_name);
 	connection_status getStatus();
@@ -200,6 +203,10 @@ void parse_command_line(size_t *max_delay, size_t *lost_bytes_delta, bool *is_fi
 	if (command_line->HasSwitch("output_file"))
 	{
 		FLAGS_output_file = command_line->GetSwitchValueASCII("output_file");
+	}
+	if (command_line->HasSwitch("connection_file"))
+	{
+		FLAGS_connection_file = command_line->GetSwitchValueASCII("connection_file");
 	}
 }
 
@@ -264,10 +271,28 @@ void client2()
 	//std::cout << "Received8: " << buffer << std::endl;
 
 #if defined(OS_POSIX)
+	auto connection_file = base::BasicStringPiece<std::string>(FLAGS_connection_file);
 	auto file_path = base::BasicStringPiece<std::string>(FLAGS_output_file);
 #elif defined(OS_WIN)
+	auto connection_file = base::BasicStringPiece<std::wstring>(L"connection_file.txt");
 	auto file_path = base::BasicStringPiece<std::wstring>(L"client_file.txt");
 #endif
+
+	// create connection file to notify tests script
+	auto connection_file_path = FilePath(connection_file);
+	auto fd = base::OpenFile(connection_file_path, "w");
+	if (fd != nullptr) {
+		base::CloseFile(fd);
+	}
+
+	// wait for tests script to configure network, and delete file
+	while (base::PathExists(connection_file_path)) {
+		base::PlatformThread::Sleep(base::TimeDelta::FromMilliseconds(100));
+	}
+
+	// all set. notify server to start transmitting
+	CHECK_NE(-1, quicr_client.sendWholeMessage("V", 1));
+
 	CHECK_NE(-1, quicr_client.recv_file(FilePath(file_path)));
 	VLOG(1) << "End of main";
 }
@@ -752,6 +777,11 @@ int QuicrClient::send(const char * data, size_t len)
 	return this->sendInner(data, len, true);
 }
 
+int QuicrClient::sendWholeMessage(const char * data, size_t len)
+{
+	return this->sendInner(data, len, true);
+}
+
 int QuicrClient::send(const char * data, size_t len, bool end_of_message)
 {
 	if (!is_fifo_) {
@@ -765,7 +795,7 @@ int QuicrClient::sendInner(const char * data, size_t len, bool end_of_message)
 	if (quicr_client == nullptr) {
 		return -1;
 	}
-	quicr_client->WriteOrBufferData(std::string(data, len), true);
+	quicr_client->WriteOrBufferData(std::string(data, len), end_of_message);
 	
 	return 0;
 }

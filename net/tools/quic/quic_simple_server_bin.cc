@@ -138,6 +138,12 @@ void server2()
 		size_t connection_id = quicr_server.accept();
 		VLOG(1) << "Connection id is " << connection_id;
 
+		char handshake[2] = { 0 };
+		CHECK_NE(-1, quicr_server.recv(connection_id, handshake, 1));
+		if (handshake[0] != 'V') {
+			LOG(ERROR) << "Bad response from client: " << handshake[0];
+		}
+
 #if defined(OS_POSIX)
 		auto file_path = base::BasicStringPiece<std::string>(FLAGS_input_file);
 #elif defined(OS_WIN)

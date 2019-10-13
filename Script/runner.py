@@ -85,10 +85,10 @@ def copy_test_file(id, file_size):
     if statinfo.st_size != (file_size * 1024 * 1024):
         raise Exception("Error during file copy")
 
-def run_tests(times, file_name, protocols, server_ip, id, m, k):
+def run_tests(times, file_name, protocols, server_ip, id, m, k, loss_rate, latency):
     tests_script = os.path.join("tests.py")
     
-    run_ssh("client%d" % id, "python %s %d %s %s %d %d %d %s" % (tests_script, times, file_name, server_ip, id, m, k, protocols), "tests_output_%d.txt" % id)
+    run_ssh("client%d" % id, "python %s %d %s %s %d %d %d %f %d %s" % (tests_script, times, file_name, server_ip, id, m, k, loss_rate, latency, protocols), "tests_output_%d.txt" % id)
 
     
 # wait for the first availabe node, remove from in_use and return it
@@ -170,7 +170,7 @@ def main(loss_rates, latencies, protocols, times, manual_fec, configure):
             
             
             # done = [(m, k) for m in xrange(10,200,5) for k in xrange(5,80,5) if m >= k]
-            to_do = [(m, k) for m in xrange(80,250,5) for k in xrange(5,100,5) if m >= k]
+            to_do = [(m, k) for m in xrange(10,250,5) for k in xrange(5,100,5)]
                 # to_do = [(m, k) for m in xrange(70,100,5) for k in xrange(5,60,5) if m >= k]
                 # done = []
                 # done = [(m, k) for m in xrange(100,200,10) for k in xrange(40,100,10) if m >= k] + [(m, k) for m in xrange(150,200,10) for k in xrange(40,90,10) if m >= k]
@@ -206,10 +206,10 @@ def main(loss_rates, latencies, protocols, times, manual_fec, configure):
             copy_test_file(curr, file_size)
 
             server_ip = server_ips[curr]
-            configure_network(curr, server_ip, loss_rate, delay)
-            time.sleep(5)
+            # configure_network(curr, server_ip, loss_rate, delay)
+            # time.sleep(5)
             
-            run_tests(times, file_name, protocols, server_ip, curr, m, k) # should get file id and server ip
+            run_tests(times, file_name, protocols, server_ip, curr, m, k, loss_rate, delay) # should get file id and server ip
     
     while len(in_use) != 0:
         print len(in_use), "clients are still working.."
