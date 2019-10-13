@@ -12,7 +12,7 @@ def main(dir):
                 c = f.read()
             x = [i.split(",") for i in c.splitlines()[1:]]          
             
-            times = [float(i[1]) for i in x if i[1] != '0']
+            times = [float(i[2]) for i in x if i[2] != '0']
             if len(times) > 0:
                 # print f_name, times
                 items.append((min(times), f_name))                
