@@ -82,6 +82,47 @@ set client19 [$ns node]
 set server19 [$ns node]
 set link19 [$ns make-lan "$client19 $server19" 100Mb 0.0ms]
 
+set client20 [$ns node]
+set server20 [$ns node]
+set link20 [$ns make-lan "$client20 $server20" 100Mb 0.0ms]
+
+set client21 [$ns node]
+set server21 [$ns node]
+set link21 [$ns make-lan "$client21 $server21" 100Mb 0.0ms]
+
+set client22 [$ns node]
+set server22 [$ns node]
+set link22 [$ns make-lan "$client22 $server22" 100Mb 0.0ms]
+
+set client23 [$ns node]
+set server23 [$ns node]
+set link23 [$ns make-lan "$client23 $server23" 100Mb 0.0ms]
+
+set client24 [$ns node]
+set server24 [$ns node]
+set link24 [$ns make-lan "$client24 $server24" 100Mb 0.0ms]
+
+set client25 [$ns node]
+set server25 [$ns node]
+set link25 [$ns make-lan "$client25 $server25" 100Mb 0.0ms]
+
+set client26 [$ns node]
+set server26 [$ns node]
+set link26 [$ns make-lan "$client26 $server26" 100Mb 0.0ms]
+
+set client27 [$ns node]
+set server27 [$ns node]
+set link27 [$ns make-lan "$client27 $server27" 100Mb 0.0ms]
+
+set client28 [$ns node]
+set server28 [$ns node]
+set link28 [$ns make-lan "$client28 $server28" 100Mb 0.0ms]
+
+set client29 [$ns node]
+set server29 [$ns node]
+set link29 [$ns make-lan "$client29 $server29" 100Mb 0.0ms]
+
+
 
 # Enable routing
 $ns rtproto Static

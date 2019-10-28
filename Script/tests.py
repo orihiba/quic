@@ -14,7 +14,8 @@ def run_tests(times, cmd_args, csv_file_name, server_ip, file_name, connection_f
     csv_file_name = os.path.join("Results", csv_file_name)
     with open(csv_file_name, "wb", buffering=0) as csv_file:
         csv_file.write("Start Time,Time To Connect,Connection Time,Bytes Received,MD5" + "\n")
-
+        first_run = True
+        
         for i in xrange(times):
             try:
                 os.remove(file_name)
@@ -29,6 +30,11 @@ def run_tests(times, cmd_args, csv_file_name, server_ip, file_name, connection_f
             # The connection should be with no network special configuration
             runner.configure_network(id, server_ip, 0, 0)
             runner.restart_servers(id, m, k)
+            
+            if not first_run and "tcp" in cmd_args[1]:
+                time.sleep(2 * 60) # wait until server port is closed
+                runner.restart_servers(id, m, k)
+            first_run = False
             
             start_time = time.time()
             print "Executing:", ' '.join(cmd_args), 'from', platform.node()
@@ -51,7 +57,10 @@ def run_tests(times, cmd_args, csv_file_name, server_ip, file_name, connection_f
             print "Deleted connection file"
             
             # Wait for the client to finish
-            timeout = 3 * 60
+            timeout = 10 * 60
+            if times == 5:
+                timeout = 2 * 60
+            
             while task.poll() is None and timeout > 0:
                 print "Waiting"
                 timeout -= time_polling

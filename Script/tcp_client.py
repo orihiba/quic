@@ -31,10 +31,11 @@ def receive(ip, port, output_file, connection_file):
     with open(output_file, "wb") as out_file:
         while bytes_received < data_size:
             data = s.recv(CHUNK_SIZE)
-            print "tcp_client: recv chunk"
+            #print "tcp_client: recv chunk"
             bytes_received += len(data)
             out_file.write(data)
-
+    
+    s.close()
 
 if __name__ == "__main__":
     if len(sys.argv) != 5:

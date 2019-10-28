@@ -94,12 +94,13 @@ def run_tests(times, file_name, protocols, server_ip, id, m, k, loss_rate, laten
 # wait for the first availabe node, remove from in_use and return it
 def wait_for_finish(in_use):
     while True:
-        for i in in_use:
+        for j, i in enumerate(in_use):
             client_name = "client%d" % i
             if len(run_ssh_read_output(client_name, "ps -ef | grep tests | grep -v grep")) == 0:
                 print "%s finished running" % client_name 
-                in_use.remove(i)
-                return i
+                # in_use.remove(i)
+                in_use = in_use[j+1:] + in_use[:j] # put the scaned in the end, to make scan quicker
+                return i, in_use
         time.sleep(10)
 
         
@@ -123,10 +124,30 @@ weights_delay = {0:0, 5:2, 50:5, 500:7}
 def main(loss_rates, latencies, protocols, times, manual_fec, configure):
     pool, server_ips = get_available_nodes() # [0, 1, 2], [1.1.1.1, 2.2.2.2, 3.3.3.3]
     available_pool = pool[:]
-    in_use = []
     
     if configure:
         configure_all(len(pool))
+        
+    in_use = []
+    
+    if protocols.endswith("!"):
+        protos = protocols[:-1].split(",")
+        print "running simultanously on:", protos
+        for proto in protos:
+            in_use, available_pool = run_simultanously(loss_rates, latencies, proto, times, manual_fec, configure, available_pool, in_use, server_ips)
+            print "in_use", in_use
+    else:
+        in_use, _ = run_simultanously(loss_rates, latencies, protocols, times, manual_fec, configure, available_pool, in_use, server_ips)
+    
+    while len(in_use) != 0:
+        print len(in_use), "clients are still working.."
+        _, in_use = wait_for_finish(in_use)
+    
+    print "all clients finished"
+    
+def run_simultanously(loss_rates, latencies, protocols, times, manual_fec, configure, available_pool, in_use, server_ips):
+    print "in_use:", in_use
+    print "available_pool:", available_pool
     
     configurations = [(delay, loss_rate) for delay in latencies for loss_rate in loss_rates]
     for delay, loss_rate in configurations:
@@ -134,6 +155,8 @@ def main(loss_rates, latencies, protocols, times, manual_fec, configure):
             # print "skipping", delay, loss_rate
             # continue
         
+
+       
         print "Running with %.1f%%, %dms" % (loss_rate, delay)
       
         file_size = 10
@@ -151,14 +174,18 @@ def main(loss_rates, latencies, protocols, times, manual_fec, configure):
         # else:
             # file_size = 1
         
-        if not manual_fec:
+        if not manual_fec or protocols != "quicr":
+            print "Not Manual FEC"
             left_to_do = [(0, 0)]
         else:
+            print "Manual FEC"
             done = [] # don't delete
             
-            
-            
-            # to_do = [(m, k) for m in xrange(3,31) for k in xrange(3,16)] + [(m, k) for m in xrange(50,80,5) for k in xrange(3,16)]
+            # if delay == 500 and loss_rate == 0.9:
+                # done = [(m, k) for m in xrange(10,20,5) for k in xrange(5,100,5)] # all
+            # else:
+                # done = [(m, k) for m in xrange(10,20,5) for k in xrange(5,100,5)] # all
+            # # to_do = [(m, k) for m in xrange(3,31) for k in xrange(3,16)] + [(m, k) for m in xrange(50,80,5) for k in xrange(3,16)]
             
             # to_do = [(m, k) for m in xrange(150,250,5) for k in xrange(20,60,5) if m >= k]
             # done = [(m, k) for m in xrange(50,150,5) for k in xrange(20,80,5) if m >= k] + [(m, k) for m in xrange(150,200,5) for k in xrange(30,100,5) if m >= k]
@@ -195,11 +222,13 @@ def main(loss_rates, latencies, protocols, times, manual_fec, configure):
             
             # take a pair from available_pool
             if len(available_pool) == 0:
-                print "No available node. Waiting.."
-                available_pool.append(wait_for_finish(in_use))
+                print "No available node. Waiting.. time: %s" % time.ctime(time.time())
+                finished, in_use = wait_for_finish(in_use)
+                available_pool.append(finished)
 
             curr = available_pool.pop(0)
             in_use.append(curr)
+            print "now in_use is", in_use
             
             kill_clients(curr)
             restart_servers(curr, m, k)
@@ -209,13 +238,15 @@ def main(loss_rates, latencies, protocols, times, manual_fec, configure):
             # configure_network(curr, server_ip, loss_rate, delay)
             # time.sleep(5)
             
-            run_tests(times, file_name, protocols, server_ip, curr, m, k, loss_rate, delay) # should get file id and server ip
-    
-    while len(in_use) != 0:
-        print len(in_use), "clients are still working.."
-        wait_for_finish(in_use)
-    
-    print "all clients finished"
+            time_to_run = times
+            if left_to_do != [(0, 0)]:
+                # we use manual FEC
+                print "times to run becomes 5"
+                time_to_run = 5
+            run_tests(time_to_run, file_name, protocols, server_ip, curr, m, k, loss_rate, delay) # should get file id and server ip
+        
+    print "Finished simultanous run"
+    return in_use, available_pool
 
 if __name__ == "__main__":
     loss_rates = [0, 0.9, 3, 9, 30, 90] # percentages. usage: tc qdisc add dev eth0 root netem loss 5%
@@ -226,7 +257,7 @@ if __name__ == "__main__":
     
     if len(sys.argv) != 1:
         if len(sys.argv) != 7:
-            print "Usage: *.py <loss_rates> <latencies> <protocols> <manual FEC> <should_configure>"
+            print "Usage: *.py <loss_rates> <latencies> <protocols> <times to run> <manual FEC> <should_configure>"
             sys.exit(1)
             
         loss_rates = [float(i) for i in sys.argv[1].split(',')]

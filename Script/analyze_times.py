@@ -4,6 +4,7 @@ import re
 import operator
 
 OUTPUT = "output.csv"
+TIMEOUT = 10 * 60.0
 
 def main(dir):
     results = []
@@ -23,8 +24,10 @@ def main(dir):
                 c = f.read()
             x = [i.split(",") for i in c.splitlines()[1:]]
             
-            times = [float(i[2]) for i in x if i[2] != '0']
-            success_runs = len(times)
+            success_times = [float(i[2]) for i in x if i[2] != '0' and i[3] == str(int(file_size) * 1024 * 1024)]
+            success_runs = len(success_times)
+            
+            times = [float(i[2]) if i[2] != '0' and i[3] == str(int(file_size) * 1024 * 1024) else TIMEOUT for i in x]
             
             if success_runs == 0:
                 avg = 0
@@ -34,8 +37,12 @@ def main(dir):
                 total = sum([pow(i - avg, 2) for i in times])
                 variance = total / len(times)
                 standard_deviation = pow(variance, 0.5)
+
+            record = [protocol, float(loss_rate), int(latency), str(avg), str(standard_deviation), str(success_runs), "V" if success_runs >= 5 else "X"]
             
-            record = [protocol, loss_rate, latency, str(avg), str(standard_deviation), str(success_runs), "V" if success_runs >= 5 else "X"]
+            if fec_conf != "0^0":
+                record += [fec_conf]
+            
             results.append(record)
             
             # print record
@@ -47,7 +54,7 @@ def main(dir):
 
         for record in results:
             # print record
-            output.write(','.join(record))
+            output.write(','.join([str(i) for i in record]))
             output.write('\n')
         
         
