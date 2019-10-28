@@ -24,6 +24,7 @@ namespace {
 // The minimum cwnd based on RFC 3782 (TCP NewReno) for cwnd reductions on a
 // fast retransmission.  The cwnd after a timeout is still 1.
 const QuicPacketCount kDefaultMinimumCongestionWindow = 2;
+//const QuicPacketCount kDefaultMinimumCongestionWindow = 141;
 }  // namespace
 
 TcpCubicSenderPackets::TcpCubicSenderPackets(

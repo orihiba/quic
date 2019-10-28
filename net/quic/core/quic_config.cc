@@ -559,9 +559,9 @@ uint32_t QuicConfig::GetInitialRoundTripTimeUsToSend() const {
 void QuicConfig::SetInitialStreamFlowControlWindowToSend(
     uint32_t window_bytes) {
   if (window_bytes < kMinimumFlowControlSendWindow) {
-    QUIC_BUG << "Initial stream flow control receive window (" << window_bytes
-             << ") cannot be set lower than default ("
-             << kMinimumFlowControlSendWindow << ").";
+    //QUIC_BUG << "Initial stream flow control receive window (" << window_bytes
+    //         << ") cannot be set lower than default ("
+    //         << kMinimumFlowControlSendWindow << ").";
     window_bytes = kMinimumFlowControlSendWindow;
   }
   initial_stream_flow_control_window_bytes_.SetSendValue(window_bytes);

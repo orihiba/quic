@@ -128,6 +128,7 @@ const QuicPacketCount kInitialCongestionWindow = 32;
 
 // Minimum size of initial flow control window, for both stream and session.
 const uint32_t kMinimumFlowControlSendWindow = 16 * 1024;  // 16 KB
+//const uint32_t kMinimumFlowControlSendWindow = 200 * 1024;  // 16 KB
 
 // Maximum flow control receive window limits for connection and stream.
 const QuicByteCount kStreamReceiveWindowLimit = 16 * 1024 * 1024;   // 16 MB

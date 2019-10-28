@@ -1682,7 +1682,7 @@ void QuicConnection::ProcessUdpPacket(const IPEndPoint& self_address,
   if (!connected_) {
     return;
   }
-#define LOSS
+//#define LOSS
 #ifdef LOSS
   static int number_of_packets = 1;
   if (perspective_ == Perspective::IS_CLIENT) {

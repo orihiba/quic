@@ -154,7 +154,7 @@ public:
 	bool connect(const char *host, uint16_t port);
 	int send(const char *data, size_t len, bool end_of_message);
 	int send(const char *data, size_t len);
-	int sendWholeMessage(const char *data, size_t len);
+	int sendEntireMessage(const char *data, size_t len);
 	int recv(char *buffer, size_t max_len);
 	int recv_file(const FilePath &file_name);
 	connection_status getStatus();
@@ -291,7 +291,7 @@ void client2()
 	}
 
 	// all set. notify server to start transmitting
-	CHECK_NE(-1, quicr_client.sendWholeMessage("V", 1));
+	CHECK_NE(-1, quicr_client.sendEntireMessage("V", 1));
 
 	CHECK_NE(-1, quicr_client.recv_file(FilePath(file_path)));
 	VLOG(1) << "End of main";
@@ -777,7 +777,7 @@ int QuicrClient::send(const char * data, size_t len)
 	return this->sendInner(data, len, true);
 }
 
-int QuicrClient::sendWholeMessage(const char * data, size_t len)
+int QuicrClient::sendEntireMessage(const char * data, size_t len)
 {
 	return this->sendInner(data, len, true);
 }
