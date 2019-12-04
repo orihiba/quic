@@ -3,10 +3,11 @@ import sys
 import re
 import operator
 
-OUTPUT = "output.csv"
+OUTPUT = "%s.csv"
 TIMEOUT = 10 * 60.0
 
 def main(dir):
+    output_file = OUTPUT % os.path.basename(dir)
     results = []
 
     for root, dirs, files in os.walk(dir):
@@ -49,7 +50,7 @@ def main(dir):
 
     results = sorted(results, key = operator.itemgetter(1, 2, 0))
             
-    with open(OUTPUT, "wb") as output:
+    with open(output_file, "wb") as output:
         output.write("Protocol,Loss Rate,Latency,Time,Standard Deviation,Success Runs,Pass" + "\n")
 
         for record in results:

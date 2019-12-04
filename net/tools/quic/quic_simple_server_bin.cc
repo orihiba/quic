@@ -150,6 +150,8 @@ void server2()
 		auto file_path = base::BasicStringPiece<std::wstring>(L"file.txt");
 #endif
 		CHECK_NE(-1, quicr_server.send_file_fifo(connection_id, FilePath(file_path)));
+		auto status = quicr_server.getStatus(connection_id);
+		status.print();
 	}
 
 	//connection_id = quicr_accept();

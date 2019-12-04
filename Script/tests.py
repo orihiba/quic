@@ -42,9 +42,18 @@ def run_tests(times, cmd_args, csv_file_name, server_ip, file_name, connection_f
             
             print "Waiting for connection"
             # Wait for connection (the CLIENT should create it)
-            while not os.path.exists(connection_file):
+            connection_timeout = 20 # 20 seconds to connect with no obsticles... should be enough
+            while not os.path.exists(connection_file) and connection_timeout > 0:
                 # print "File does not exist"
                 time.sleep(0.1)
+                connection_timeout -= 0.1
+            
+            if connection_timeout <= 0:
+                # this server machine is faulted. 
+                print "Bad server. run again for %s" % (csv_file_name,)
+                while True:
+                    pass
+            
             
             # Conencted
             print "Connection confirmed"
@@ -59,7 +68,9 @@ def run_tests(times, cmd_args, csv_file_name, server_ip, file_name, connection_f
             # Wait for the client to finish
             timeout = 10 * 60
             if times == 5:
-                timeout = 2 * 60
+                timeout = 3 * 60
+                if latency < 750:
+                    timeout = 2 * 60
             
             while task.poll() is None and timeout > 0:
                 print "Waiting"

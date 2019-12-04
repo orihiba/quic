@@ -104,9 +104,13 @@ def wait_for_finish(in_use):
         time.sleep(10)
 
         
-def get_available_nodes():
+def get_available_nodes(exclude):
+    pool = []
     ips = []
     for i in xrange(0,30):
+        if i in exclude:
+            ips.append("0.0.0.0")
+            continue
         server_name = "server%d" % i
         ip = run_ssh_read_output("client0", "ping %s -c 1 | cut -d '(' -f 2 | cut -d ')' -f 1 | head -n 1" % server_name)
         print ip
@@ -114,15 +118,16 @@ def get_available_nodes():
         if len(ip) == 0:
             break
         
+        pool.append(i)
         ips.append(ip)
     
-    return [i for i in xrange(len(ips))], ips
+    return pool, ips
     
 weights_loss = {0:0, 0.9:1, 3:2, 9:3, 30:5, 90:7}
 weights_delay = {0:0, 5:2, 50:5, 500:7}
     
-def main(loss_rates, latencies, protocols, times, manual_fec, configure):
-    pool, server_ips = get_available_nodes() # [0, 1, 2], [1.1.1.1, 2.2.2.2, 3.3.3.3]
+def main(loss_rates, latencies, protocols, times, manual_fec, configure, exclude):
+    pool, server_ips = get_available_nodes(exclude) # [0, 1, 2], [1.1.1.1, 2.2.2.2, 3.3.3.3]
     available_pool = pool[:]
     
     if configure:
@@ -140,10 +145,10 @@ def main(loss_rates, latencies, protocols, times, manual_fec, configure):
         in_use, _ = run_simultanously(loss_rates, latencies, protocols, times, manual_fec, configure, available_pool, in_use, server_ips)
     
     while len(in_use) != 0:
-        print len(in_use), "clients are still working.."
+        print len(in_use), "clients are still working..", time.ctime(time.time())
         _, in_use = wait_for_finish(in_use)
     
-    print "all clients finished"
+    print "all clients finished.", time.ctime(time.time())
     
 def run_simultanously(loss_rates, latencies, protocols, times, manual_fec, configure, available_pool, in_use, server_ips):
     print "in_use:", in_use
@@ -151,11 +156,18 @@ def run_simultanously(loss_rates, latencies, protocols, times, manual_fec, confi
     
     configurations = [(delay, loss_rate) for delay in latencies for loss_rate in loss_rates]
     for delay, loss_rate in configurations:
-        # if delay != 500 and loss_rate == 9.0:
+        # if protocols == "quic" and (loss_rate, delay) not in [(30.0, 500), (0.9, 250)]:
             # print "skipping", delay, loss_rate
             # continue
         
-
+        # if protocols == "quicr" and (loss_rate, delay) not in [(30.0, 250), (30.0, 0), (30.0, 500), (15.0, 250), (15.0, 500), (0.9, 1000)]:
+            # print "skipping", delay, loss_rate
+            # continue
+        
+        # if delay not in [750,1000] and not(protocols == "quicr" and (delay, loss_rate) in [(5, 30.0), (0, 30.0)]):
+            # print "skipping", delay, loss_rate
+            # continue
+        
        
         print "Running with %.1f%%, %dms" % (loss_rate, delay)
       
@@ -181,9 +193,9 @@ def run_simultanously(loss_rates, latencies, protocols, times, manual_fec, confi
             print "Manual FEC"
             done = [] # don't delete
             
-            # if delay == 500 and loss_rate == 0.9:
-                # done = [(m, k) for m in xrange(10,20,5) for k in xrange(5,100,5)] # all
-            # else:
+            # if delay != 50 or loss_rate != 15.0:
+                # done = [(m, k) for m in xrange(10,250,5) for k in xrange(5,100,5)] # all
+            # # else:
                 # done = [(m, k) for m in xrange(10,20,5) for k in xrange(5,100,5)] # all
             # # to_do = [(m, k) for m in xrange(3,31) for k in xrange(3,16)] + [(m, k) for m in xrange(50,80,5) for k in xrange(3,16)]
             
@@ -193,11 +205,19 @@ def run_simultanously(loss_rates, latencies, protocols, times, manual_fec, confi
             
             # to_do = [(m, k) for m in xrange(200,400,5) for k in xrange(5,200,5) if m >= k]
             
+            # if (loss_rate, delay) not in  [(9.0, 750), (9.0, 1000), (30.0, 500)]:
+                # done = [(m, k) for m in xrange(10,250,5) for k in xrange(5,100,5)] 
+                
+            # to_do = [(m, k) for m in xrange(5,255,5) for k in xrange(5,105,5)]
             
+            # this
+            to_do = [(m, k) for m in xrange(10,250,5) for k in xrange(5,100,5)]
+            
+            # to_do = [(m, k) for m in xrange(1) for k in xrange(3)]
             
             
             # done = [(m, k) for m in xrange(10,200,5) for k in xrange(5,80,5) if m >= k]
-            to_do = [(m, k) for m in xrange(10,250,5) for k in xrange(5,100,5)]
+            
                 # to_do = [(m, k) for m in xrange(70,100,5) for k in xrange(5,60,5) if m >= k]
                 # done = []
                 # done = [(m, k) for m in xrange(100,200,10) for k in xrange(40,100,10) if m >= k] + [(m, k) for m in xrange(150,200,10) for k in xrange(40,90,10) if m >= k]
@@ -239,10 +259,10 @@ def run_simultanously(loss_rates, latencies, protocols, times, manual_fec, confi
             # time.sleep(5)
             
             time_to_run = times
-            if left_to_do != [(0, 0)]:
-                # we use manual FEC
-                print "times to run becomes 5"
-                time_to_run = 5
+            # if left_to_do != [(0, 0)]:
+                # # we use manual FEC
+                # print "times to run becomes 5"
+                # time_to_run = 5
             run_tests(time_to_run, file_name, protocols, server_ip, curr, m, k, loss_rate, delay) # should get file id and server ip
         
     print "Finished simultanous run"
@@ -254,10 +274,11 @@ if __name__ == "__main__":
     protocols = "quic,quicr,tcp"
     times = 10
     configure = True
+    exclude = []
     
     if len(sys.argv) != 1:
-        if len(sys.argv) != 7:
-            print "Usage: *.py <loss_rates> <latencies> <protocols> <times to run> <manual FEC> <should_configure>"
+        if len(sys.argv) != 8:
+            print "Usage: *.py <loss_rates> <latencies> <protocols> <times to run> <manual FEC> <should_configure> <exclude_servers>"
             sys.exit(1)
             
         loss_rates = [float(i) for i in sys.argv[1].split(',')]
@@ -266,6 +287,7 @@ if __name__ == "__main__":
         times      = int(sys.argv[4])
         manual_fec   = True if sys.argv[5] == "True" else False
         configure   = True if sys.argv[6] == "True" else False
+        exclude  = [int(i) for i in sys.argv[7].split(',')]
 
-    main(loss_rates, latencies, protocols, times, manual_fec, configure)
+    main(loss_rates, latencies, protocols, times, manual_fec, configure, exclude)
     
