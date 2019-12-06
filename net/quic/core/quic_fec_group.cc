@@ -5,7 +5,7 @@
 #include "net/quic/core/quic_fec_group.h"
 
 #include <limits>
-
+//#include <iostream>
 #include "base/logging.h"
 #include "base/stl_util.h"
 #include "net/quic/core/quic_utils.h"
@@ -26,671 +26,72 @@ QuicPacketCount QuicFecGroup::k_from_conf(FecConfiguration conf)
 		return kDefaultMaxPacketsPerFecGroup;
 	}
 	switch (conf) {
-	//case FEC_100_5:
-	//	return 100;
-	//case FEC_50_5:
-	//	return 50;
-	//case FEC_20_5:
-	//	return 20;
-	//case FEC_15_5:
-	//	return 15;
-	//case FEC_10_5:
-	//	return 10;
+		case FEC_5_5:
+		case FEC_5_10:
+			//std::cout<< "k = 5" << std::endl;
+			return 5;
+		case FEC_10_10:
+		case FEC_10_15:
+		case FEC_10_20:
+		case FEC_10_40:
+		case FEC_10_45:
+			//std::cout<< "k = 10" << std::endl;
+			return 10;
+		case FEC_15_15:
+			//std::cout<< "k = 15" << std::endl;
+			return 15;
+		case FEC_55_55:
+			//std::cout<< "k = 55" << std::endl;
+			return 55;
+		case FEC_185_5:
+			//std::cout<< "k = 185" << std::endl;
+			return 185;
+		case FEC_250_5:
+			//std::cout<< "k = 250" << std::endl;
+			return 250;
 
-
-	//case FEC_5_5:
-	//case FEC_5_10:
-	//case FEC_5_15:
-	//	return 5;
-
-	//case FEC_200_5:
-	//	return 200;
-
-	//case FEC_120_100:
-	//	return 120;
-	//case FEC_250_5:
-	//	return 250;
-
-	//		
-	//case FEC_190_5:
-	//	return 190;
-	////case FEC_240_5:
-	////	return 240;
-	////case FEC_165_5:
-	////	return 165;
-
-	//		
-	//	/*
-	//case FEC_185_35:
-	//case FEC_185_5:
-	//	return 185;
-
-	//case FEC_155_5:
-	//	return 155;
-	//case FEC_180_5:
-	//	return 180;
-	//		
-	//case FEC_130_5:
-	//	return 130;*/
-	///*case FEC_190_5:
-	//	return 130;*/
-	//		
-	////		
-	////case FEC_225_5:
-	////	return 225;
-	////		
-
-		/*
-	// results 0
-	case FEC_10_25:
-	case FEC_10_20:
-	case FEC_10_30:
-	case FEC_10_35:
-	case FEC_10_40:
-	case FEC_10_5:
-	case FEC_10_15:
-	case FEC_10_10:
-	case FEC_10_55:
-	case FEC_10_45:
-	case FEC_10_60:
-		return 10;
-	case FEC_220_5:
-	case FEC_220_20:
-		return 220;
-	case FEC_200_10:
-		return 200;
-	
-	case FEC_15_15:
-		return 15;
-	case FEC_190_5:
-		return 190;
-	case FEC_235_5:
-		return 235;
-	case FEC_100_10:
-	case FEC_100_5:
-		return 100;
-	case FEC_240_5:
-		return 240;
-	case FEC_165_5:
-		return 165;
-	case FEC_155_5:
-		return 155;
-	case FEC_180_5:
-		return 180;
-	case FEC_185_5:
-		return 185;
-	case FEC_225_5:
-		return 225;
-	case FEC_20_5:
-	case FEC_20_10:
-		return 20;
-	case FEC_150_5:
-		return 150;
-	case FEC_215_5:
-		return 215;
-	case FEC_130_5:
-		return 130;
-		
-*/
-
-/*
-	// results 1
-	case FEC_5_5:
-	case FEC_5_10:
-	case FEC_5_15:
-		return 5;
-	case FEC_10_15:
-	case FEC_10_20:
-	case FEC_10_10:
-	case FEC_10_5:
-		return 10;
-	case FEC_15_15:
-	return 15;
-	case FEC_250_5:
-		return 250;
-	case FEC_200_5:
-		return 200;
-	case FEC_215_5:
-		return 215;
-	case FEC_210_20:
-		return 210;
-	case FEC_160_20:
-		return 160;
-	case FEC_190_5:
-		return 190;
-	case FEC_120_100:
-		return 120;
-	case FEC_55_55:
-		return 55;
-*/
-
-/*
-// results 3
-	case FEC_5_5:
-	case FEC_5_10:
-	case FEC_5_15:
-		return 5;
-	case FEC_10_45:
-	case FEC_10_50:
-	case FEC_10_25:
-	case FEC_10_5:
-	case FEC_10_55:
-	case FEC_10_35:
-	case FEC_10_15:
-	case FEC_10_30:
-	case FEC_10_20:
-	case FEC_10_10:
-		return 10;
-	case FEC_15_20:
-	case FEC_15_15:
-		return 15;
-	case FEC_50_75:
-	case FEC_50_65:
-		return 50;
-	case FEC_55_75:
-		return 55;
-	case FEC_65_85:
-	case FEC_65_65:
-		return 65;
-	case FEC_85_100:
-		return 85;
-	case FEC_120_100:
-		return 120;
-	case FEC_160_20:
-		return 160;
-	case FEC_190_5:
-		return 190;
-	case FEC_200_5:
-		return 200;
-	case FEC_210_20:
-		return 210;
-	case FEC_250_5:
-		return 250;
-		*/
-/*
-// results 15
-	case FEC_240_5:
-		return 240;
-	case FEC_250_5:
-		return 250;
-	case FEC_10_5:
-	case FEC_10_10:
-	case FEC_10_15:
-	case FEC_10_20:
-	case FEC_10_25:
-	case FEC_10_30:
-	case FEC_10_35:
-	case FEC_10_40:
-	case FEC_10_45:
-	case FEC_10_50:
-		return 10;
-		*/
-
-	//case FEC_15_15:
-
-	//	return 15;
-
-	////case FEC_210_20:
-	////	return 210;
-	////case FEC_160_20:
-	////	return 160;
-
-
-
-	////case FEC_65_85:
-	////	return 65;
-
-	////case FEC_15_20:
-	////	return 15;
-	////case FEC_50_65:
-	////case FEC_50_75:
-	////	return 50;
-	////case FEC_65_65:
-	////	return 65;
-
-	////case FEC_55_75:
-	////	return 55;
-	////case FEC_85_100:
-	////	return 85;
-
-
-	//case FEC_235_5:
-	//	return 235;
-	//case FEC_100_10:
-	//case FEC_100_5:
-	//	return 100;
-	//case FEC_240_5:
-	//	return 240;
-	//case FEC_220_5:
-	//	return 220;
-	//case FEC_165_5:
-	//	return 165;
-	//case FEC_155_5:
-	//	return 155;
-	//case FEC_180_5:
-	//	return 180;
-	//case FEC_185_5:
-	//	return 185;
-	//case FEC_220_20:
-	//	return 220;
-	//case FEC_225_5:
-	//	return 225;
-	//case FEC_10_60:
-	//	return 10;
-	//	
-	//case FEC_20_5:
-	//case FEC_20_10:
-	//	return 20;
-	//case FEC_150_5:
-	//	return 150;
-	//case FEC_215_5:
-	//	return 215;
-	//case FEC_130_5:
-	//	return 130;
-
-
-// results 9
-/*
-case FEC_5_15:
-case FEC_5_20:
-case FEC_5_30:
-case FEC_5_35:
-case FEC_5_10:
-	return 5;
-case FEC_10_10:
-case FEC_10_25:
-case FEC_10_35:
-case FEC_10_40:
-case FEC_10_45:
-case FEC_10_50:
-case FEC_10_60:
-case FEC_10_65:
-case FEC_10_80:
-case FEC_10_55:
-case FEC_10_20:
-case FEC_10_30:
-	return 10;
-case FEC_15_25:
-case FEC_15_30:
-case FEC_15_35:
-case FEC_15_20:
-case FEC_15_15:
-case FEC_15_80:
-	return 15;
-case FEC_20_20:
-	return 20;
-case FEC_45_55:
-	return 45;
-case FEC_50_75:
-case FEC_50_85:
-	return 50;
-case FEC_55_70:
-	return 55;
-case FEC_60_70:
-	return 60;
-case FEC_80_85:
-	return 80;
-case FEC_250_5:
-	return 250;
-	*/
-
-// results 19
-case FEC_10_20:
-case FEC_10_25:
-case FEC_10_30:
-case FEC_10_35:
-case FEC_10_40:
-case FEC_10_45:
-case FEC_10_50:
-case FEC_10_5:
-case FEC_10_10:
-case FEC_10_15:
-	return 10;
-case FEC_15_15:
-	return 15;
-
-	case FEC_OFF:
-		DLOG(ERROR) << "fec configuration is FEC_OFF in fec group: " << conf;
-		return 0;
-	default:
-		DLOG(ERROR) << "unknown fec configuration in fec group: " << conf;
-		return 0;
+		case FEC_OFF:
+			DLOG(ERROR) << "fec configuration is FEC_OFF in fec group: " << conf;
+			return 0;
+		default:
+			DLOG(ERROR) << "unknown fec configuration in fec group: " << conf;
+			return 0;
 	}
 }
 
 QuicPacketCount QuicFecGroup::m_from_conf(FecConfiguration conf)
 {
 	// check if manually entered m
-	/*if (kDefaultRecoveryBlocksCount != 0) {
+	if (kDefaultRecoveryBlocksCount != 0) {
 		return kDefaultRecoveryBlocksCount;
-	}*/
+	}
 	switch (conf) {
 
-
-	/*case FEC_10_15:
-		return 15;*/
-
-//	case FEC_10_10:
-//	//case FEC_200_10:
-//		return 10;
-//
-//	//case FEC_240_5:
-//	//case FEC_220_5:
-//	//case FEC_165_5:
-//	//case FEC_155_5:
-//	//case FEC_180_5:
-//	//case FEC_185_5:
-//	//case FEC_130_5:
-//	//case FEC_190_5:
-//	//case FEC_225_5:
-//	//case FEC_10_5:
-//
-//	//case FEC_5_5:
-//	//case FEC_200_5:
-//	//case FEC_250_5:
-//
-//		return 5;
-//
-//	//case FEC_220_20:
-//		//return 20;
-//	case FEC_10_25:
-//		return 25;
-//
-//	//case FEC_10_55:
-//	//	return 55;
-//	//case FEC_10_45:
-//	//	return 45;
-//
-//	case FEC_10_20:
-//		return 20;
-//
-//
-//	case FEC_10_30:
-//	return 30;
-//	case FEC_15_15:
-//		return 15;
-//
-//	case FEC_10_35:
-//	//case FEC_185_35:
-//		return 35;
-//
-//	//case FEC_100_5:
-//	//case FEC_20_5:
-//	//case FEC_10_5:
-//
-//	//case FEC_215_5:
-//	//case FEC_240_5:
-//	//case FEC_220_5:
-//	//case FEC_165_5:
-//	//	return 5;
-//
-
-
-	//case FEC_10_20:
-		//return 20;
-
-	//case FEC_10_30:
-		//return 30;
-//
-//
-//	//case FEC_55_55:
-//		//return 55;
-//
-//	//case FEC_160_20:
-//	//case FEC_210_20:
-//	//	return 20;
-//
-//
-//	//case FEC_5_10:
-//	//	return 10;
-//	//case FEC_120_100:
-//	//	return 100;
-//	//case FEC_5_15:
-//	//	return 15;
-//	//case FEC_65_85:
-//	//	return 85;
-//	//case FEC_10_50:
-//	//	return 50;
-//
-//	case FEC_10_55:
-//		return 55;
-//
-//	case FEC_10_45:
-//		return 45;
-
-	//case FEC_15_20:
-	//	return 20;
-	//case FEC_50_65:
-	//case FEC_65_65:
-	//	return 65;
-	//case FEC_50_75:
-	//case FEC_55_75:
-	//	return 75;
-	//case FEC_85_100:
-	//	return 100;
-		
-/*
-// results 0
-
-	case FEC_10_25:
-		return 25;
-	case FEC_10_30:
-		return 30;
-	case FEC_10_35:
-		return 35;
-	
-	case FEC_10_45:
-		return 45;
-	case FEC_10_55:
-		return 55;
-	
-	case FEC_10_5:
-	case FEC_190_5:
-	case FEC_235_5:
-	case FEC_240_5:
-	case FEC_220_5:
-	case FEC_165_5:
-	case FEC_155_5:
-	case FEC_180_5:
-	case FEC_185_5:
-	case FEC_225_5:
-	case FEC_100_5:
-	case FEC_20_5:
-	case FEC_150_5:
-	case FEC_215_5:
-	case FEC_130_5:
-		return 5;
-	case FEC_10_20:
-	case FEC_220_20:
-		return 20;
-
-	case FEC_10_40:
-		return 40;
-	case FEC_10_60:
-		return 60;
-
-	case FEC_10_10:
-	case FEC_100_10:
-	case FEC_20_10:
-	case FEC_200_10:
-		return 10;
-
-	case FEC_10_15:
-	case FEC_15_15:
-		return 15;
-		*/
-
-		/*
-		// results 1
-		case FEC_250_5:
-		case FEC_5_5:
-		case FEC_200_5:
-		case FEC_215_5:
-		case FEC_190_5:
-		case FEC_10_5:
-		return 5;
-		case FEC_5_10:
-		case FEC_10_10:
-		return 10;
-		case FEC_10_15:
-		case FEC_15_15:
-		case FEC_5_15:
-		return 15;
-		case FEC_210_20:
-		case FEC_160_20:
-		case FEC_10_20:
-		return 20;
-		case FEC_55_55:
-		return 55;
-		case FEC_120_100:
-		return 100;
-		*/
-
-/*
-	// results 3
 	case FEC_5_5:
-	case FEC_10_5:
-	case FEC_190_5:
-	case FEC_200_5:
 	case FEC_250_5:
+	case FEC_185_5:
+		//std::cout<< "m = 5" << std::endl;
 		return 5;
 	case FEC_5_10:
 	case FEC_10_10:
+		//std::cout<< "m = 10" << std::endl;
 		return 10;
 	case FEC_15_15:
 	case FEC_10_15:
-	case FEC_5_15:
+		//std::cout<< "m = 15" << std::endl;
 		return 15;
 	case FEC_10_20:
-	case FEC_15_20:
-	case FEC_160_20:
-	case FEC_210_20:
+		//std::cout<< "m = 20" << std::endl;
 		return 20;
-	case FEC_10_25:
-		return 25;
-	case FEC_10_30:
-		return 30;
-	case FEC_10_35:
-		return 35;
-	case FEC_10_45:
-		return 45;
-	case FEC_10_50:
-		return 50;
-	case FEC_10_55:
-		return 55;
-	case FEC_50_65:
-	case FEC_65_65:
-		return 65;
-	case FEC_50_75:
-	case FEC_55_75:
-		return 75;
-	case FEC_65_85:
-		return 85;
-	case FEC_85_100:
-	case FEC_120_100:
-		return 100;
-		*/
-// results 9
-/*
-		case FEC_250_5:
-			return 5;
-		case FEC_5_10:
-		case FEC_10_10:
-			return 10;
-		case FEC_5_15:
-		case FEC_15_15:
-			return 15;
-		case FEC_20_20:
-		case FEC_10_20:
-		case FEC_15_20:
-		case FEC_5_20:
-			return 20;
-		case FEC_15_25:
-		case FEC_10_25:
-			return 25;
-		case FEC_5_30:
-		case FEC_10_30:
-		case FEC_15_30:
-			return 30;
-		case FEC_15_35:
-		case FEC_5_35:
-		case FEC_10_35:
-			return 35;
-		case FEC_10_40:
-			return 40;
-		case FEC_10_45:
-			return 45;
-		case FEC_10_50:
-			return 50;
-		case FEC_10_55:
-		case FEC_45_55:
-			return 55;
-		case FEC_10_60:
-			return 60;
-		case FEC_10_65:
-			return 65;
-		case FEC_60_70:
-		case FEC_55_70:
-			return 70;
-		case FEC_50_75:
-			return 75;
-		case FEC_15_80:
-		case FEC_10_80:
-			return 80;
-		case FEC_50_85:
-		case FEC_80_85:
-			return 85;
-			*/
-
-/*
-// results 15
-	case FEC_240_5:
-	case FEC_250_5:
-	case FEC_10_5:
-		return 5;
-	
-	case FEC_10_10:
-		return 10;
-	case FEC_10_15:
-		return 15;
-	case FEC_10_20:
-		return 20;
-	case FEC_10_25:
-		return 25;
-	case FEC_10_30:
-		return 30;
-	case FEC_10_35:
-		return 35;
 	case FEC_10_40:
+		//std::cout<< "m = 40" << std::endl;
 		return 40;
 	case FEC_10_45:
+		//std::cout<< "m = 45" << std::endl;
 		return 45;
-	case FEC_10_50:
-		return 50;
-		*/
-		
-// results 19
-case FEC_10_10:
-	return 10;
-case FEC_15_15:
-case FEC_10_15:
-	return 15;
-case FEC_10_20:
-	return 20;
-case FEC_10_25:
-	return 25;
-case FEC_10_30:
-	return 30;
-case FEC_10_35:
-	return 35;
-case FEC_10_40:
-	return 40;
-case FEC_10_45:
-	return 45;
-case FEC_10_50:
-	return 50;
-case FEC_10_5:
-	return 5;
+	case FEC_55_55:
+		//std::cout<< "m = 55" << std::endl;
+		return 55;
 
 	case FEC_OFF:
 		DLOG(ERROR) << "fec configuration is FEC_OFF in fec group: " << conf;

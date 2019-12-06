@@ -800,6 +800,28 @@ const char * printFecConf(FecConfiguration conf)
 	switch (conf) {
 	case FEC_OFF:
 		return "FEC_OFF";
+	case FEC_5_5:
+		return "FEC_5_5";
+	case FEC_5_10:
+		return "FEC_5_10";
+	case FEC_250_5:
+		return "FEC_250_5";
+	case FEC_185_5:
+		return "FEC_185_5";
+	case FEC_55_55:
+		return "FEC_55_55";
+	case FEC_10_10:
+		return "FEC_10_10";
+	case FEC_15_15:
+		return "FEC_15_15";
+	case FEC_10_15:
+		return "FEC_10_15";
+	case FEC_10_20:
+		return "FEC_10_20";
+	case FEC_10_40:
+		return "FEC_10_40";
+	case FEC_10_45:
+		return "FEC_10_45";
 	default:
 		return "NO SUCH FEC CONF";
 	}
@@ -831,10 +853,11 @@ void QuicConnection::UpdateFecCofiguration(QuicPacketCount packets_received)
 	DVLOG(1) << "packets_sent_delta:" << packets_sent_delta;
 
 	//if ((packets_sent_delta == 0) || (packets_received_delta >= packets_sent_delta)) {
-	//	// not updating last items, so next sample will handle those values
-	//	DVLOG(1) << "packets_sent_delta is 0. doing nothing";
-	//	return;
-	//}
+	if (packets_sent_delta == 0) {
+		// not updating last items, so next sample will handle those values
+		DVLOG(1) << "packets_sent_delta is 0. doing nothing";
+		return;
+	}
 
 	// old method:
 	//QuicPacketCount curr_total_packet_deltas = packets_sent_delta + packets_received_delta;
@@ -862,212 +885,56 @@ void QuicConnection::UpdateFecCofiguration(QuicPacketCount packets_received)
 	last_packets_received = packets_received;
 
 	double loss_rate = total_loss_rate * 100;
-
+	
 	auto stats = GetStats();
-	//auto rtt = stats.min_rtt_us / 1000; // in ms
-	auto rtt = stats.srtt_us / 1000; // in ms
+	auto rtt = stats.srtt_us / 1000; // in micros
 	DVLOG(1) << "rtt = " << rtt << std::endl;
 
-		if (loss_rate <= 0.2) { // 0
-			if (rtt < 5) {
-				current_fec_configuration = FEC_10_10;
-			}
-			else if (rtt < 50) {
-				current_fec_configuration = FEC_10_10;
-			}
-			else if (rtt < 250) {
-				current_fec_configuration = FEC_10_10;
-			}
-			else if (rtt < 500) {
-				current_fec_configuration = FEC_10_10;
-			}
-			else if (rtt < 750) {
-				current_fec_configuration = FEC_10_10;
-			}
-			else if (rtt < 1000) {
-				current_fec_configuration = FEC_10_10;
-			}
-			else { // rtt >= 1000ms
-				current_fec_configuration = FEC_10_10;
-			}
-		}
-		else if (loss_rate <= 2) { // 0.9
-			if (rtt < 5) {
-				current_fec_configuration = FEC_10_10;
-			}
-			else if (rtt < 50) {
-				current_fec_configuration = FEC_10_10;
-			}
-			else if (rtt < 250) {
-				current_fec_configuration = FEC_10_10;
-			}
-			else if (rtt < 500) {
-				current_fec_configuration = FEC_10_10;
-			}
-			else if (rtt < 750) {
-				current_fec_configuration = FEC_10_10;
-			}
-			else if (rtt < 1000) {
-				current_fec_configuration = FEC_10_10;
-			}
-			else { // rtt >= 1000ms
-				current_fec_configuration = FEC_10_10;
-			}
-		}
-		else if (loss_rate <= 4) { // 3
-			if (rtt < 5) {
-				current_fec_configuration = FEC_10_10;
-			}
-			else if (rtt < 50) {
-				current_fec_configuration = FEC_10_10;
-			}
-			else if (rtt < 250) {
-				current_fec_configuration = FEC_10_10;
-			}
-			else if (rtt < 500) {
-				current_fec_configuration = FEC_10_10;
-			}
-			else if (rtt < 750) {
-				current_fec_configuration = FEC_10_10;
-			}
-			else if (rtt < 1000) {
-				current_fec_configuration = FEC_10_10;
-			}
-			else { // rtt >= 1000ms
-				current_fec_configuration = FEC_10_10;
-			}
-		}
-		else if (loss_rate <= 11) { // 9
-			if (rtt < 5) {
-				current_fec_configuration = FEC_10_10;
-			}
-			else if (rtt < 50) {
-				current_fec_configuration = FEC_10_10;
-			}
-			else if (rtt < 250) {
-				current_fec_configuration = FEC_10_10;
-			}
-			else if (rtt < 500) {
-				current_fec_configuration = FEC_10_10;
-			}
-			else if (rtt < 750) {
-				current_fec_configuration = FEC_10_10;
-			}
-			else if (rtt < 1000) {
-				current_fec_configuration = FEC_10_10;
-			}
-			else { // rtt >= 1000ms
-				current_fec_configuration = FEC_10_10;
-			}
-		}
-		else if (loss_rate <= 20) { // 15
-			if (rtt < 5) {
-				current_fec_configuration = FEC_10_10;
-			}
-			else if (rtt < 50) {
-				current_fec_configuration = FEC_10_10;
-			}
-			else if (rtt < 250) {
-				current_fec_configuration = FEC_10_10; // change to 10^35
-			}
-			else if (rtt < 500) {
-				current_fec_configuration = FEC_10_10;
-			}
-			else if (rtt < 750) {
-				current_fec_configuration = FEC_10_15;
-			}
-			else if (rtt < 1000) {
-				current_fec_configuration = FEC_10_10;
-			}
-			else { // rtt >= 1000ms
-				current_fec_configuration = FEC_10_10;
-			}
-		}
-		else { // 30
-			if (rtt < 5) {
-				switch (kDefaultRecoveryBlocksCount) {
-				case 0:
-					current_fec_configuration = FEC_10_5;
-					break;
-				case 1:
-					current_fec_configuration = FEC_10_10;
-					break;
-				case 2:
-					current_fec_configuration = FEC_10_15;
-					break;
-				case 3:
-					current_fec_configuration = FEC_10_20;
-					break;
-				case 4:
-					current_fec_configuration = FEC_10_25;
-					break;
-				case 5:
-					current_fec_configuration = FEC_10_30;
-					break;
-				case 6:
-					current_fec_configuration = FEC_10_35;
-					break;
-				case 7:
-					current_fec_configuration = FEC_10_40;
-					break;
-				case 8:
-					current_fec_configuration = FEC_10_45;
-					break;
-				case 9:
-					current_fec_configuration = FEC_10_50;
-					break;
-				}
-			}
-			else if (rtt < 50) {
-				current_fec_configuration = FEC_10_10;
-			}
-			else if (rtt < 250) {
-				current_fec_configuration = FEC_10_10;
-			}
-			else if (rtt < 500) {
-				current_fec_configuration = FEC_15_15;
-			}
-			else if (rtt < 750) {
-				current_fec_configuration = FEC_10_10;
-			}
-			else if (rtt < 1000) {
-				current_fec_configuration = FEC_10_10;
-			}
-			else { // rtt >= 1000ms
-				current_fec_configuration = FEC_10_10;
-			}
-		}
+	FecConfiguration confs[6][7] = {
+	{ FEC_OFF, FEC_OFF, FEC_OFF, FEC_OFF, FEC_OFF, FEC_OFF, FEC_OFF },
+	{ FEC_250_5, FEC_185_5, FEC_10_10, FEC_10_10, FEC_15_15, FEC_55_55, FEC_10_10 },
+	{ FEC_250_5, FEC_5_5, FEC_10_15, FEC_10_10, FEC_10_10, FEC_10_10, FEC_10_10 },
+	{ FEC_250_5, FEC_5_5, FEC_5_5, FEC_5_5, FEC_10_10, FEC_10_10, FEC_10_10 },
+	{ FEC_250_5, FEC_10_45, FEC_5_5, FEC_10_10, FEC_10_15, FEC_5_10, FEC_5_10 },
+	{ FEC_10_40, FEC_10_15, FEC_10_15, FEC_10_20, FEC_10_15, FEC_10_15, FEC_10_10 }
+	};
 
+	size_t loss_rate_index = 0;
+	if (loss_rate <= 0.2) {			// 0
+		loss_rate_index = 0;
+	} else if (loss_rate < 2) {	// 0.9
+		loss_rate_index = 1;
+	} else if (loss_rate < 7) {	// 3
+		loss_rate_index = 2;
+	} else if (loss_rate < 11.5) {	// 9
+		loss_rate_index = 3;
+	} else if (loss_rate < 20) {	// 15
+		loss_rate_index = 4;
+	} else {						// 30
+		loss_rate_index = 5;
+	}
 
+	size_t latency_index = 0;
+	if (rtt < 5) {
+		latency_index = 0;
+	} else if (rtt < 50) {
+		latency_index = 1;
+	} else if (rtt < 250) {
+		latency_index = 2;
+	} else if (rtt < 500) {
+		latency_index = 3;
+	} else if (rtt < 750) {
+		latency_index = 4;
+	} else if (rtt < 1000) {
+		latency_index = 5;
+	} else {						// rtt >= 1000ms
+		latency_index = 6;
+	}
 
+	std::cout << "loss = " << loss_rate << ", rtt = " << rtt << std::endl;
+	std::cout << " i = " << loss_rate_index << ", j = " << latency_index << ", fec conf: " << printFecConf(current_fec_configuration) << std::endl;
 
-	//int loss_rate_group = (total_loss_rate * 100) / 2.5;
-	//switch (loss_rate_group) {
-	//case 0:
-	//	current_fec_configuration = FEC_OFF;
-	//	break;
-	//case 1:
-	//	current_fec_configuration = FEC_OFF;
-	//	break;
-	//case 2:
-	//	current_fec_configuration = FEC_100_5;
-	//	break;
-	//case 3:
-	//	current_fec_configuration = FEC_50_5;
-	//	break;
-	//case 4:
-	//	current_fec_configuration = FEC_20_5;
-	//	break;
-	//case 5:
-	//	current_fec_configuration = FEC_15_5;
-	//	break;
-	//default: // high loss rate
-	//	current_fec_configuration = FEC_10_5;
-	//	break;
-	//}
-
-	
-	
+	current_fec_configuration = confs[loss_rate_index][latency_index];
 	
 	if (current_fec_configuration == FEC_OFF && kDefaultMaxPacketsPerFecGroup == 0) { // if not manually assigned m and k
 		useFec = false;
