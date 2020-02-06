@@ -27,25 +27,15 @@ QuicPacketCount QuicFecGroup::k_from_conf(FecConfiguration conf)
 	}
 	switch (conf) {
 		case FEC_5_5:
-		case FEC_5_10:
-			//std::cout<< "k = 5" << std::endl;
 			return 5;
 		case FEC_10_10:
 		case FEC_10_15:
 		case FEC_10_20:
-		case FEC_10_40:
-		case FEC_10_45:
 			//std::cout<< "k = 10" << std::endl;
 			return 10;
 		case FEC_15_15:
 			//std::cout<< "k = 15" << std::endl;
 			return 15;
-		case FEC_55_55:
-			//std::cout<< "k = 55" << std::endl;
-			return 55;
-		case FEC_185_5:
-			//std::cout<< "k = 185" << std::endl;
-			return 185;
 		case FEC_250_5:
 			//std::cout<< "k = 250" << std::endl;
 			return 250;
@@ -69,10 +59,8 @@ QuicPacketCount QuicFecGroup::m_from_conf(FecConfiguration conf)
 
 	case FEC_5_5:
 	case FEC_250_5:
-	case FEC_185_5:
 		//std::cout<< "m = 5" << std::endl;
 		return 5;
-	case FEC_5_10:
 	case FEC_10_10:
 		//std::cout<< "m = 10" << std::endl;
 		return 10;
@@ -83,15 +71,6 @@ QuicPacketCount QuicFecGroup::m_from_conf(FecConfiguration conf)
 	case FEC_10_20:
 		//std::cout<< "m = 20" << std::endl;
 		return 20;
-	case FEC_10_40:
-		//std::cout<< "m = 40" << std::endl;
-		return 40;
-	case FEC_10_45:
-		//std::cout<< "m = 45" << std::endl;
-		return 45;
-	case FEC_55_55:
-		//std::cout<< "m = 55" << std::endl;
-		return 55;
 
 	case FEC_OFF:
 		DLOG(ERROR) << "fec configuration is FEC_OFF in fec group: " << conf;

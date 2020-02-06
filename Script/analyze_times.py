@@ -2,6 +2,7 @@ import os
 import sys
 import re
 import operator
+# from numpy import median
 
 OUTPUT = "%s.csv"
 TIMEOUT = 10 * 60.0
@@ -28,12 +29,14 @@ def main(dir):
             success_times = [float(i[2]) for i in x if i[2] != '0' and i[3] == str(int(file_size) * 1024 * 1024)]
             success_runs = len(success_times)
             
-            times = [float(i[2]) if i[2] != '0' and i[3] == str(int(file_size) * 1024 * 1024) else TIMEOUT for i in x]
+            # times = [float(i[2]) if i[2] != '0' and i[3] == str(int(file_size) * 1024 * 1024) else TIMEOUT for i in x]
+            times = [float(i[2]) for i in x if i[2] != '0' and i[3] == str(int(file_size) * 1024 * 1024)]
             
             if success_runs == 0:
                 avg = 0
                 standard_deviation = 0
             else:
+                # med = median(times)
                 avg = float(sum(times)) / len(times)
                 total = sum([pow(i - avg, 2) for i in times])
                 variance = total / len(times)

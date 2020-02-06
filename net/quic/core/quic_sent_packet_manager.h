@@ -194,6 +194,8 @@ class NET_EXPORT_PRIVATE QuicSentPacketManager
   // Called when peer address changes and the connection migrates.
   void OnConnectionMigration(QuicPathId, PeerAddressChangeType type) override;
 
+  void ResetStats() override;
+
   void SetDebugDelegate(DebugDelegate* debug_delegate) override;
 
   QuicPacketNumber GetLargestObserved(QuicPathId) const override;

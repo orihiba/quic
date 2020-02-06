@@ -55,8 +55,8 @@ class QuicrServer
 {
 private:
 	std::unique_ptr<SerevrThread> quiqr_server;
-	net::QuicNormalServer *server;
 	base::TaskRunner *task_runner;
+	net::QuicNormalServer *server;
 	bool is_fifo_;
 	int sendInner(size_t connection_id, const char * data, size_t len, bool end_of_message);
 public:
@@ -67,6 +67,7 @@ public:
 	int send_file_fifo(size_t connection_id, const FilePath &file_name);
 	int recv(size_t connection_id, char *buffer, size_t max_len);
 	connection_status getStatus(size_t connection_id);
+	void resetStats(size_t connection_id);
 };
 
 
@@ -142,7 +143,7 @@ void server2()
 		CHECK_NE(-1, quicr_server.recv(connection_id, handshake, 1));
 		if (handshake[0] != 'V') {
 			LOG(ERROR) << "Bad response from client: " << handshake[0];
-		}
+		}		
 
 #if defined(OS_POSIX)
 		auto file_path = base::BasicStringPiece<std::string>(FLAGS_input_file);
@@ -494,6 +495,9 @@ int QuicrServer::send_file_fifo(size_t connection_id, const FilePath &file_path)
 	std::cout << "Sending file " << file_path.value() << " with len " << file_len << std::endl;
 	VLOG(2) << file_contents_;
 
+	// Reset all stats, to start tests
+	resetStats(connection_id);
+
 	// have to be FIFO because the size is sent here
 	RET_ON_ERROR(send(connection_id, (char*)file_len_ptr, sizeof(file_len), false));
 	VLOG(1) << "sent file size";
@@ -585,6 +589,16 @@ connection_status QuicrServer::getStatus(size_t connection_id)
 		connection->current_loss_rate(),
 	};
 	return status;
+}
+
+void QuicrServer::resetStats(size_t connection_id)
+{
+	printf("Reseting stats\n");
+	auto session = connectionToSession(connection_id, server);
+	session->connection()->startTest();
+	auto &sentPacketManager = session->connection()->sent_packet_manager();
+	auto sentPacketManager_ = const_cast<net::QuicSentPacketManager*>((net::QuicSentPacketManager*)&sentPacketManager);
+	sentPacketManager_->ResetStats();
 }
 
 //void flush()

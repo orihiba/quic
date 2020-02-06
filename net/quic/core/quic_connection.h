@@ -470,7 +470,7 @@ class NET_EXPORT_PRIVATE QuicConnection
   QuicPacketCount getPacketsReceivedNumber() override;
 
   void UpdateFecCofiguration(QuicPacketCount packets_received_number);
-
+  void startTest();
 
   // QuicConnectionCloseDelegateInterface
   void OnUnrecoverableError(QuicErrorCode error,
@@ -1173,6 +1173,7 @@ class NET_EXPORT_PRIVATE QuicConnection
   double total_loss_rate;
   std::vector<QuicPacketCount> packet_deltas;
   QuicPacketCount total_packet_deltas;
+  bool test_started_;
 
   DISALLOW_COPY_AND_ASSIGN(QuicConnection);
 };

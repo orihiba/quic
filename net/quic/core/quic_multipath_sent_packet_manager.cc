@@ -360,6 +360,10 @@ void QuicMultipathSentPacketManager::OnConnectionMigration(
   path_manager->OnConnectionMigration(path_id, type);
 }
 
+void QuicMultipathSentPacketManager::ResetStats()
+{
+}
+
 void QuicMultipathSentPacketManager::SetDebugDelegate(
     DebugDelegate* debug_delegate) {
   for (PathSentPacketManagerInfo path_manager_info : path_managers_info_) {

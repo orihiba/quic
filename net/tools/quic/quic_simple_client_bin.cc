@@ -285,11 +285,12 @@ void client2()
 		base::CloseFile(fd);
 	}
 
+#if defined(OS_POSIX)
 	// wait for tests script to configure network, and delete file
 	while (base::PathExists(connection_file_path)) {
 		base::PlatformThread::Sleep(base::TimeDelta::FromMilliseconds(100));
 	}
-
+#endif
 	// all set. notify server to start transmitting
 	CHECK_NE(-1, quicr_client.sendEntireMessage("V", 1));
 

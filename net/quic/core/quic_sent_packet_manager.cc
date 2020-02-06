@@ -1054,6 +1054,11 @@ void QuicSentPacketManager::OnConnectionMigration(QuicPathId,
   send_algorithm_->OnConnectionMigration();
 }
 
+void QuicSentPacketManager::ResetStats()
+{
+	rtt_stats_.OnConnectionMigration();
+}
+
 void QuicSentPacketManager::SetDebugDelegate(DebugDelegate* debug_delegate) {
   debug_delegate_ = debug_delegate;
 }

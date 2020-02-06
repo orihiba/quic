@@ -49,14 +49,6 @@ void RttStats::UpdateRtt(QuicTime::Delta send_delta,
     return;
   }
 
-  // Update min_rtt_ first. min_rtt_ does not use an rtt_sample corrected for
-  // ack_delay but the raw observed send_delta, since poor clock granularity at
-  // the client may cause a high ack_delay to result in underestimation of the
-  // min_rtt_.
-  if (min_rtt_.IsZero() || min_rtt_ > send_delta) {
-    min_rtt_ = send_delta;
-  }
-
   // Correct for ack_delay if information received from the peer results in a
   // positive RTT sample. Otherwise, we use the send_delta as a reasonable
   // measure for smoothed_rtt.
@@ -66,6 +58,15 @@ void RttStats::UpdateRtt(QuicTime::Delta send_delta,
   if (rtt_sample > ack_delay) {
     rtt_sample = rtt_sample - ack_delay;
   }
+
+  // Update min_rtt_ first. min_rtt_ does not use an rtt_sample corrected for
+  // ack_delay but the raw observed send_delta, since poor clock granularity at
+  // the client may cause a high ack_delay to result in underestimation of the
+  // min_rtt_.
+  if (min_rtt_.IsZero() || min_rtt_ > rtt_sample) {
+	  min_rtt_ = rtt_sample;
+  }
+
   latest_rtt_ = rtt_sample;
   // First time call.
   if (smoothed_rtt_.IsZero()) {

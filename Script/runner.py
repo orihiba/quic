@@ -208,13 +208,17 @@ def run_simultanously(loss_rates, latencies, protocols, times, manual_fec, confi
             # if (loss_rate, delay) not in  [(9.0, 750), (9.0, 1000), (30.0, 500)]:
                 # done = [(m, k) for m in xrange(10,250,5) for k in xrange(5,100,5)] 
                 
-            # to_do = [(m, k) for m in xrange(5,255,5) for k in xrange(5,105,5)]
-            
             # this
-            to_do = [(m, k) for m in xrange(10,250,5) for k in xrange(5,100,5)]
+            # to_do = [(m, k) for m in xrange(5,255,5) for k in xrange(5,105,5)]            
+            # to_do = [(m, k) for m in xrange(5,50,5) for k in xrange(5,50,5)]            
+            # done = [(m, k) for m in xrange(10,250,5) for k in xrange(5,100,5)]
             
-            # to_do = [(m, k) for m in xrange(1) for k in xrange(3)]
+            # to_do = [(10, 25), (10,15), (10,20), (5,5)]
+            # to_do = [(m, k) for m in xrange(1) for k in xrange(1,18)]
+            # to_do = [(m, k) for m in xrange(1) for k in (12,13,5,6,4,3,1)]
+            # to_do = [(m, k) for m in xrange(1) for k in xrange(0,17*7)] # For testsing all options for 60
             
+            to_do = [(0, k) for k in xrange(50)]
             
             # done = [(m, k) for m in xrange(10,200,5) for k in xrange(5,80,5) if m >= k]
             
@@ -232,8 +236,8 @@ def run_simultanously(loss_rates, latencies, protocols, times, manual_fec, confi
             left_to_do = list(set(to_do) - set(done))
             left_to_do.sort()
 
-        
-        print "Total test scenarios:", len(left_to_do)
+        left_count = len(left_to_do)
+        print "Total test scenarios:", left_count
         
         for m, k in left_to_do:
             print "m = %d, k = %d" % (m, k)
@@ -242,7 +246,7 @@ def run_simultanously(loss_rates, latencies, protocols, times, manual_fec, confi
             
             # take a pair from available_pool
             if len(available_pool) == 0:
-                print "No available node. Waiting.. time: %s" % time.ctime(time.time())
+                print "No available node. Waiting.. left to do: %d. time: %s" % (left_count, time.ctime(time.time()))
                 finished, in_use = wait_for_finish(in_use)
                 available_pool.append(finished)
 
@@ -264,6 +268,7 @@ def run_simultanously(loss_rates, latencies, protocols, times, manual_fec, confi
                 # print "times to run becomes 5"
                 # time_to_run = 5
             run_tests(time_to_run, file_name, protocols, server_ip, curr, m, k, loss_rate, delay) # should get file id and server ip
+            left_count -= 1
         
     print "Finished simultanous run"
     return in_use, available_pool

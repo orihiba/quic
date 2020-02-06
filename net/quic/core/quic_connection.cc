@@ -351,7 +351,8 @@ peek_idle_time_(QuicTime::Delta::FromSeconds(2)),
 	  packets_received_heigher_bytes(0),
 	  total_loss_rate(0),
 	  packet_deltas(),
-	  total_packet_deltas(0) {
+	  total_packet_deltas(0),
+	  test_started_(false) {
   DVLOG(1) << ENDPOINT
            << "Created connection with connection_id: " << connection_id;
   framer_.set_visitor(this);
@@ -802,14 +803,8 @@ const char * printFecConf(FecConfiguration conf)
 		return "FEC_OFF";
 	case FEC_5_5:
 		return "FEC_5_5";
-	case FEC_5_10:
-		return "FEC_5_10";
 	case FEC_250_5:
 		return "FEC_250_5";
-	case FEC_185_5:
-		return "FEC_185_5";
-	case FEC_55_55:
-		return "FEC_55_55";
 	case FEC_10_10:
 		return "FEC_10_10";
 	case FEC_15_15:
@@ -818,10 +813,6 @@ const char * printFecConf(FecConfiguration conf)
 		return "FEC_10_15";
 	case FEC_10_20:
 		return "FEC_10_20";
-	case FEC_10_40:
-		return "FEC_10_40";
-	case FEC_10_45:
-		return "FEC_10_45";
 	default:
 		return "NO SUCH FEC CONF";
 	}
@@ -885,22 +876,22 @@ void QuicConnection::UpdateFecCofiguration(QuicPacketCount packets_received)
 	last_packets_received = packets_received;
 
 	double loss_rate = total_loss_rate * 100;
-	
 	auto stats = GetStats();
-	auto rtt = stats.srtt_us / 1000; // in micros
+	auto rtt = stats.min_rtt_us / 1000; // in micros
 	DVLOG(1) << "rtt = " << rtt << std::endl;
 
+	
 	FecConfiguration confs[6][7] = {
 	{ FEC_OFF, FEC_OFF, FEC_OFF, FEC_OFF, FEC_OFF, FEC_OFF, FEC_OFF },
-	{ FEC_250_5, FEC_185_5, FEC_10_10, FEC_10_10, FEC_15_15, FEC_55_55, FEC_10_10 },
+	{ FEC_250_5, FEC_5_5, FEC_10_10, FEC_15_15, FEC_10_10, FEC_10_10, FEC_10_10 },
 	{ FEC_250_5, FEC_5_5, FEC_10_15, FEC_10_10, FEC_10_10, FEC_10_10, FEC_10_10 },
-	{ FEC_250_5, FEC_5_5, FEC_5_5, FEC_5_5, FEC_10_10, FEC_10_10, FEC_10_10 },
-	{ FEC_250_5, FEC_10_45, FEC_5_5, FEC_10_10, FEC_10_15, FEC_5_10, FEC_5_10 },
-	{ FEC_10_40, FEC_10_15, FEC_10_15, FEC_10_20, FEC_10_15, FEC_10_15, FEC_10_10 }
+	{ FEC_250_5, FEC_5_5, FEC_10_10, FEC_10_10, FEC_10_10, FEC_10_10, FEC_10_10 },
+	{ FEC_250_5, FEC_10_15, FEC_10_10, FEC_10_10, FEC_10_10, FEC_10_10, FEC_10_10 },
+	{ FEC_10_20, FEC_10_20, FEC_10_15, FEC_10_15, FEC_10_15, FEC_10_15, FEC_10_15 }
 	};
-
+	
 	size_t loss_rate_index = 0;
-	if (loss_rate <= 0.2) {			// 0
+	if (loss_rate <= 0.1) {			// 0
 		loss_rate_index = 0;
 	} else if (loss_rate < 2) {	// 0.9
 		loss_rate_index = 1;
@@ -930,12 +921,40 @@ void QuicConnection::UpdateFecCofiguration(QuicPacketCount packets_received)
 	} else {						// rtt >= 1000ms
 		latency_index = 6;
 	}
-
-	std::cout << "loss = " << loss_rate << ", rtt = " << rtt << std::endl;
-	std::cout << " i = " << loss_rate_index << ", j = " << latency_index << ", fec conf: " << printFecConf(current_fec_configuration) << std::endl;
-
-	current_fec_configuration = confs[loss_rate_index][latency_index];
 	
+	// skip the first samples
+	static unsigned int samples_count = 0;
+	if (samples_count++ < 10) {
+		if (loss_rate > 0.2) {
+			current_fec_configuration = confs[3][latency_index];
+			useFec = true;
+		} else {
+			current_fec_configuration = FEC_OFF;
+			useFec = false;
+		}
+
+		sent_packet_manager_->setNacksNumber(useFec ? QuicFecGroup::m_from_conf(current_fec_configuration) : 3);
+
+		DVLOG(1) << "Skipping sample, count is: " << samples_count << ", fec conf : " << printFecConf(current_fec_configuration) << std::endl;;
+		return;
+	}
+
+	static bool changed_once = false;
+	FecConfiguration new_conf = confs[loss_rate_index][latency_index];
+	if (new_conf != current_fec_configuration) {
+		if (changed_once) {
+			current_fec_configuration = new_conf;
+			changed_once = false;
+		} else {
+			changed_once = true;
+		}
+	} else {
+		changed_once = false;
+	}
+	
+	DVLOG(1) << "loss = " << loss_rate << ", rtt = " << rtt;
+	DVLOG(1) << " i = " << loss_rate_index << ", j = " << latency_index << ", fec conf: " << printFecConf(current_fec_configuration);
+
 	if (current_fec_configuration == FEC_OFF && kDefaultMaxPacketsPerFecGroup == 0) { // if not manually assigned m and k
 		useFec = false;
 	} else {
@@ -943,19 +962,12 @@ void QuicConnection::UpdateFecCofiguration(QuicPacketCount packets_received)
 	}
 	//DVLOG(1) << "current_fec_configuration: " << current_fec_configuration;
 
-	auto m = QuicFecGroup::m_from_conf(current_fec_configuration);
-	sent_packet_manager_->setNacksNumber(m);
-	
-	//std::cout << "loss_rate: " << loss_rate << " rtt: " << rtt << " and min rtt is: " << stats.min_rtt_us << std::endl;
+	sent_packet_manager_->setNacksNumber(useFec ? QuicFecGroup::m_from_conf(current_fec_configuration) : 3);
+}
 
-	//static time_t last = 0;
-	//time_t curr = time(NULL);
-	//if (!last || (curr - last > 5)) {
-	//	last = curr;
-
-	//	//auto stats = GetStats();
-	//	std::cout << "total_loss_rate: " << total_loss_rate << " rtt: " << rtt << " current_fec_configuration: " << printFecConf(current_fec_configuration) << std::endl;
-	//}
+void QuicConnection::startTest()
+{
+	test_started_ = true;
 }
 
 bool QuicConnection::OnAckFrame(const QuicAckFrame& incoming_ack) {
@@ -1002,8 +1014,13 @@ bool QuicConnection::OnAckFrame(const QuicAckFrame& incoming_ack) {
   //{
   //}
 
-  if (programUseFec) {
+  if (programUseFec && perspective_ == Perspective::IS_SERVER && test_started_) {
 	  UpdateFecCofiguration(incoming_ack.packets_received_number);
+  } else if (last_header_.is_in_fec_group) {
+	// The client should use the configuration that the server uses
+	current_fec_configuration = last_header_.is_in_fec_group ? last_header_.fec_configuration : FEC_OFF;
+	useFec = !((current_fec_configuration == FEC_OFF) && (kDefaultMaxPacketsPerFecGroup == 0)); // if not manually assigned m and k
+	sent_packet_manager_->setNacksNumber(useFec ? QuicFecGroup::m_from_conf(current_fec_configuration) : 3);
   }
 
   return connected_;
@@ -2473,7 +2490,7 @@ void QuicConnection::MaybeProcessRevivedPacket() {
 		QuicPacketHeader revived_header;
 
 		revived_header.packet_number = (*it)->packet_number;
-		revived_header.entropy_flag = false;  // Unknown entropy.
+		revived_header.entropy_flag = false;  // Unknown entropy. //TODO: maybe use random_bool_source_.RandBool()
 		
 		if (!received_packet_manager_.IsAwaitingPacket(
 			revived_header.packet_number)) {
@@ -2507,7 +2524,7 @@ void QuicConnection::MaybeProcessRevivedPacket() {
 
 
 QuicFecGroup* QuicConnection::GetFecGroup() {
-	if (!useFec) {
+	if (!useFec || !last_header_.is_in_fec_group) {
 		return nullptr;
 	}
 	QuicFecGroupNumber fec_group_num = last_header_.fec_group;

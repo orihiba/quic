@@ -32,6 +32,7 @@ size_t lostBytesDelta = 0xffffffffffffffff;
 void initCommandlineArgs()
 {
 	base::CommandLine* command_line = base::CommandLine::ForCurrentProcess();
+	// m and k are reversed here
 	if (command_line->HasSwitch("fec"))
 	{
 		programUseFec = true;

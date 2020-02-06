@@ -65,16 +65,11 @@ typedef std::list<QuicPacketNumber> PacketNumberList;
 enum FecConfiguration {
 	FEC_OFF,
 	FEC_5_5,
-	FEC_5_10,
-	FEC_250_5,
-	FEC_185_5,
-	FEC_55_55,
 	FEC_10_10,
-	FEC_15_15,
 	FEC_10_15,
 	FEC_10_20,
-	FEC_10_40,
-	FEC_10_45,
+	FEC_15_15,
+	FEC_250_5,
 };
 
 // Default max packets in an FEC group.
