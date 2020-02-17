@@ -133,7 +133,7 @@ def create_tcp_quicr_ratio_graph():
             x += [i] #[latency]
             y += [sample_tcp[0] / sample_quicr[0]]
         
-        plt.errorbar(x, y, linestyle=lines2[loss], marker=markers2[loss], fmt='--' + colors2[loss], label=loss)
+        plt.errorbar(x, y, linestyle=lines2[loss], marker=markers2[loss], fmt='--' + colors2[loss], label=str(loss) + "%")
         plt.legend(loc='best')
     
     plt.xticks(np.arange(len(latencies)), latencies)
@@ -149,8 +149,8 @@ def create_tcp_quicr_ratio_graph():
     # plt.plot(5.025, 600, marker='x',color=colors['quic'])
     # plt.plot(6.025, 600, marker='x',color=colors['quic'])
 
-    plt.xlabel('Latency (milliseconds)')
-    plt.ylabel('Time ratio: tcp/quicr (?)')     
+    plt.xlabel('Latency L (milliseconds)')
+    plt.ylabel('Time ratio r(L) tcp/quicr')     
     
     plt.grid(True, linestyle="dashed")
     plt.savefig("graph_tcp_quicr_ratio.pdf")
